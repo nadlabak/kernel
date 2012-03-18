@@ -753,8 +753,10 @@ static int show_partition(struct seq_file *seqf, void *v)
 	/* show the full disk and all non-0 size partitions of it */
 	disk_part_iter_init(&piter, sgp, DISK_PITER_INCL_PART0);
 	while ((part = disk_part_iter_next(&piter))) {
+#ifdef CONFIG_MMC
 		get_mmcalias_by_id(alias, MAJOR(part_devt(part)),
 			MINOR(part_devt(part)));
+#endif
 		seq_printf(seqf, "%4d  %7d %10llu %s\t%s\n",
 			   MAJOR(part_devt(part)), MINOR(part_devt(part)),
 			   (unsigned long long)part->nr_sects >> 1,
