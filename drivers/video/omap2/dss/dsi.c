@@ -1241,6 +1241,7 @@ void dsi_dump_clocks(struct seq_file *s)
 	struct dsi_clock_info *cinfo = &dsi.current_cinfo;
 
 	enable_clocks(1);
+	dsi_enable_pll_clock(1);
 
 	clksel = REG_GET(DSI_PLL_CONFIGURATION2, 11, 11);
 
@@ -1286,6 +1287,7 @@ void dsi_dump_clocks(struct seq_file *s)
 			dispc_pclk_rate());
 
 	enable_clocks(0);
+	dsi_enable_pll_clock(0);
 }
 
 void dsi_dump_regs(struct seq_file *s)
@@ -1293,6 +1295,7 @@ void dsi_dump_regs(struct seq_file *s)
 #define DUMPREG(r) seq_printf(s, "%-35s %08x\n", #r, dsi_read_reg(r))
 
 	dss_clk_enable(DSS_CLK_ICK | DSS_CLK_FCK1);
+	dsi_enable_pll_clock(1);
 
 	DUMPREG(DSI_REVISION);
 	DUMPREG(DSI_SYSCONFIG);
@@ -1365,6 +1368,7 @@ void dsi_dump_regs(struct seq_file *s)
 	DUMPREG(DSI_PLL_CONFIGURATION2);
 
 	dss_clk_disable(DSS_CLK_ICK | DSS_CLK_FCK1);
+	dsi_enable_pll_clock(0);
 #undef DUMPREG
 }
 
@@ -2227,24 +2231,28 @@ int dsi_vc_dcs_read(int channel, u8 dcs_cmd, u8 *buf, int buflen)
 	u32 val;
 	u8 dt;
 	int r;
-
+	
 	if (dsi.debug_read)
 		DSSDBG("dsi_vc_dcs_read(ch%d, dcs_cmd %u)\n", channel, dcs_cmd);
-
+	
 	r = dsi_vc_send_short(channel, DSI_DT_DCS_READ, dcs_cmd, 0);
 	if (r)
 		return r;
-
+	
 	r = dsi_vc_send_bta_sync(channel);
 	if (r)
 		return r;
-
+	
+	enable_clocks(1);
+	dsi_enable_pll_clock(1);
+	
 	/* RX_FIFO_NOT_EMPTY */
 	if (REG_GET(DSI_VC_CTRL(channel), 20, 20) == 0) {
 		DSSERR("RX fifo empty when trying to read.\n");
-		return -EIO;
+		r = -EIO;
+		goto err;
 	}
-
+	
 	val = dsi_read_reg(DSI_VC_SHORT_PACKET_HEADER(channel));
 	if (dsi.debug_read)
 		DSSDBG("\theader: %08x\n", val);
@@ -2252,65 +2260,77 @@ int dsi_vc_dcs_read(int channel, u8 dcs_cmd, u8 *buf, int buflen)
 	if (dt == DSI_DT_RX_ACK_WITH_ERR) {
 		u16 err = FLD_GET(val, 23, 8);
 		dsi_show_rx_ack_with_err(err);
-		return -EIO;
-
+		r = -EIO;
+		
 	} else if (dt == DSI_DT_RX_SHORT_READ_1) {
 		u8 data = FLD_GET(val, 15, 8);
 		if (dsi.debug_read)
 			DSSDBG("\tDCS short response, 1 byte: %02x\n", data);
-
-		if (buflen < 1)
-			return -EIO;
-
+		
+		if (buflen < 1) {
+			r = -EIO;
+			goto err;
+		}
+		
 		buf[0] = data;
-
-		return 1;
+		
+		r = 1;
 	} else if (dt == DSI_DT_RX_SHORT_READ_2) {
 		u16 data = FLD_GET(val, 23, 8);
 		if (dsi.debug_read)
 			DSSDBG("\tDCS short response, 2 byte: %04x\n", data);
-
-		if (buflen < 2)
-			return -EIO;
-
+		
+		if (buflen < 2) {
+			r = -EIO;
+			goto err;
+		}
+		
 		buf[0] = data & 0xff;
 		buf[1] = (data >> 8) & 0xff;
-
-		return 2;
+		
+		r = 2;
 	} else if (dt == DSI_DT_RX_DCS_LONG_READ) {
 		int w;
 		int len = FLD_GET(val, 23, 8);
 		if (dsi.debug_read)
 			DSSDBG("\tDCS long response, len %d\n", len);
-
-		if (len > buflen)
-			return -EIO;
-
+		
+		if (len > buflen) {
+			r = -EIO;
+			goto err;
+		}
+		
 		/* two byte checksum ends the packet, not included in len */
 		for (w = 0; w < len + 2;) {
 			int b;
 			val = dsi_read_reg(DSI_VC_SHORT_PACKET_HEADER(channel));
 			if (dsi.debug_read)
 				DSSDBG("\t\t%02x %02x %02x %02x\n",
-						(val >> 0) & 0xff,
-						(val >> 8) & 0xff,
-						(val >> 16) & 0xff,
-						(val >> 24) & 0xff);
-
-			for (b = 0; b < 4; ++b) {
-				if (w < len)
-					buf[w] = (val >> (b * 8)) & 0xff;
-				/* we discard the 2 byte checksum */
-				++w;
-			}
+							 (val >> 0) & 0xff,
+							 (val >> 8) & 0xff,
+							 (val >> 16) & 0xff,
+							 (val >> 24) & 0xff);
+				
+				for (b = 0; b < 4; ++b) {
+					if (w < len)
+						buf[w] = (val >> (b * 8)) & 0xff;
+					/* we discard the 2 byte checksum */
+					++w;
+				}
 		}
-
-		return len;
-
+		
+		r = len;
+		
 	} else {
 		DSSERR("\tunknown datatype 0x%02x\n", dt);
-		return -EIO;
+		r = -EIO;
 	}
+	err:
+	enable_clocks(0);
+	dsi_enable_pll_clock(0);
+	
+	return r;
+	
 }
 EXPORT_SYMBOL(dsi_vc_dcs_read);
 
@@ -3466,102 +3486,115 @@ end:
 	mutex_unlock(&dsi.lock);
 }
 
-static int dsi_display_suspend(struct omap_dss_device *dssdev)
+static int dsi_do_display_suspend(struct omap_dss_device *dssdev)
 {
-	DSSDBG("dsi_display_suspend\n");
-
-
-	dsi.error_recovery.enabled = false;
-	cancel_work_sync(&dsi.error_recovery.work);
-
-	mutex_lock(&dsi.lock);
-	dsi_bus_lock();
-
+	DSSDBG("dsi_do_display_suspend\n");
+	
 	complete_all(&dsi.update_completion);
-
+	
 	if (dssdev->state == OMAP_DSS_DISPLAY_DISABLED ||
-			dssdev->state == OMAP_DSS_DISPLAY_SUSPENDED)
-		goto end;
-
+		dssdev->state == OMAP_DSS_DISPLAY_SUSPENDED)
+		return 0;
+	
 	dsi.update_mode = OMAP_DSS_UPDATE_DISABLED;
 	dssdev->state = OMAP_DSS_DISPLAY_SUSPENDED;
-
+	
 	dsi.update_region.dirty = false;
 	
 	enable_clocks(1);
 	dsi_enable_pll_clock(1);
-
+	
 	dsi_display_uninit_dispc(dssdev);
-
+	
 	dsi_display_uninit_dsi(dssdev);
-
+	
 	enable_clocks(0);
 	dsi_enable_pll_clock(0);
-end:
-	dsi_bus_unlock();
-	mutex_unlock(&dsi.lock);
-
+	
 	return 0;
 }
 
-static int dsi_display_resume(struct omap_dss_device *dssdev)
+static int dsi_display_suspend(struct omap_dss_device *dssdev)
 {
-	int r;
-
-	DSSDBG("dsi_display_resume\n");
-
 	mutex_lock(&dsi.lock);
 	dsi_bus_lock();
+	
+	dsi.error_recovery.enabled = false;
+	cancel_work_sync(&dsi.error_recovery.work);
+	
+	dsi_do_display_suspend(dssdev);
+	
+	dsi_bus_unlock();
+	mutex_unlock(&dsi.lock);
+	
+	return 0;
+}
 
+static int dsi_do_display_resume(struct omap_dss_device *dssdev)
+{
+	int r;
+	
+	DSSDBG("dsi_do_display_resume\n");
+	
 	if (dssdev->state != OMAP_DSS_DISPLAY_SUSPENDED) {
 		DSSERR("dssdev not suspended\n");
 		r = -EINVAL;
 		goto err0;
 	}
-
+	
 	enable_clocks(1);
 	dsi_enable_pll_clock(1);
-
+	
 	r = _dsi_reset();
 	if (r)
 		goto err1;
-
+	
 	dsi_core_init();
-
+	
 	r = dsi_display_init_dispc(dssdev);
 	if (r)
 		goto err1;
-
+	
 	r = dsi_display_init_dsi(dssdev);
 	if (r)
 		goto err2;
-
+	
 	dssdev->state = OMAP_DSS_DISPLAY_ACTIVE;
-
+	
 	r = dsi_set_te(dssdev, dsi.te_enabled);
 	if (r)
 		goto err2;
-
+	
 	dsi_set_update_mode(dssdev, dsi.user_update_mode);
-
+	
 	enable_clocks(0);
 	dsi_enable_pll_clock(0);
-	dsi.error_recovery.enabled = true;
-
-	dsi_bus_unlock();
-	mutex_unlock(&dsi.lock);
-
+	
 	return 0;
-
-err2:
+	
+	err2:
 	dsi_display_uninit_dispc(dssdev);
-err1:
+	err1:
 	enable_clocks(0);
 	dsi_enable_pll_clock(0);
-err0:
+	err0:
+	DSSDBG("dsi_do_display_resume FAILED\n");
+	return r;
+}
+
+static int dsi_display_resume(struct omap_dss_device *dssdev)
+{
+	int r;
+	
+	mutex_lock(&dsi.lock);
+	dsi_bus_lock();
+	
+	r = dsi_do_display_resume(dssdev);
+	if (r == 0)
+		dsi.error_recovery.enabled = true;
+	
 	dsi_bus_unlock();
 	mutex_unlock(&dsi.lock);
-	DSSDBG("dsi_display_resume FAILED\n");
 	return r;
 }
 
@@ -3916,8 +3949,6 @@ static void dsi_error_recovery_worker(struct work_struct *work)
 
 	dsi_force_tx_stop_mode_io();
 
-	dsi.error_recovery.recovering = false;
-
 	enable_clocks(0);
 	dsi_enable_pll_clock(0);
 
@@ -3925,12 +3956,14 @@ static void dsi_error_recovery_worker(struct work_struct *work)
 	/* If not, we need to hard reset */
 	if (dsi.error_recovery.dssdev->driver->run_test) {
 		if (dsi.framedone_timeout || dsi.error_recovery.dssdev->driver->run_test(dsi.error_recovery.dssdev, 1) != 0) {
-			printk(KERN_INFO "DSI: framedone timeout - doing hard reset \n");
-			dsi_display_suspend(dsi.error_recovery.dssdev);
-			dsi_display_resume(dsi.error_recovery.dssdev);
+			DSSERR("DSI error, framedone timeout - doing hard reset \n");
+			dsi_do_display_suspend(dsi.error_recovery.dssdev);
+			dsi_do_display_suspend(dsi.error_recovery.dssdev);
 			dsi.framedone_timeout = false;
 		}
 	}
+	
+	dsi.error_recovery.recovering = false;
 	
 	dsi_bus_unlock();
 
