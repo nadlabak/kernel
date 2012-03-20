@@ -34,7 +34,9 @@
 #include "prm.h"
 #include "cm.h"
 #include "pm.h"
+
 #include "smartreflex.h"
+
 #include "prm-regbits-34xx.h"
 
 int omap2_pm_debug;

@@ -278,11 +278,15 @@ static int program_opp_freq(int res, int target_level, int current_level)
 	return target_level;
 }
 
+#ifdef CONFIG_OMAP_SMARTREFLEX
+
 #ifdef CONFIG_OMAP_SMARTREFLEX_CLASS1P5
 u8 sr_class1p5 = 1;
 #else
 /* use default of 0 */
 u8 sr_class1p5;
+#endif
+
 #endif
 
 

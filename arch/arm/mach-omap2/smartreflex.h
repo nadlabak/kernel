@@ -260,7 +260,7 @@ int omap_pmic_voltage_cmds(u8 srid, u8 target_vsel);
 
 extern int omap3630_abb_change_active_opp(u32 target_opp_no);
 
-int sr_recalibrate(struct omap_opp *opp, u32 target_opp, u32 current_opp);
+extern int sr_recalibrate(struct omap_opp *opp, u32 target_opp, u32 current_opp);
 
 #ifdef CONFIG_PM_DEBUG
 #define __SR_DEBUG
@@ -303,7 +303,7 @@ static inline int omap_pmic_voltage_cmds(u8 srid, u8 target_vsel)
 	return -EINVAL;
 }
 #endif
-int sr_recalibrate(struct omap_opp *opp, u32 target_opp, u32 current_opp)
+static int inline sr_recalibrate(struct omap_opp *opp, u32 target_opp, u32 current_opp)
 {
 	return -EINVAL;
 }

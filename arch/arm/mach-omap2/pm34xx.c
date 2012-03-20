@@ -51,7 +51,6 @@
 #include "cm.h"
 #include "cm-regbits-34xx.h"
 #include "prm-regbits-34xx.h"
-
 #include "smartreflex.h"
 #include "prm.h"
 #include "pm.h"
@@ -106,6 +105,7 @@ static struct prm_setup_vc prm_setup = {
 	.vdd1_onlp = 0x20,	/* 1.0v */
 	.vdd1_ret = 0x1e,	/* .975v */
 	.vdd1_off = 0x00,	/* 0.6v */
+#ifdef CONFIG_OMAP_SMARTREFLEX
 	.i2c_slave_ra = (R_SRI2C_SLAVE_ADDR << OMAP3430_SMPS_SA1_SHIFT) |
 			(R_SRI2C_SLAVE_ADDR << OMAP3430_SMPS_SA0_SHIFT),
 	.vdd_vol_ra = (R_VDD2_SR_CONTROL << OMAP3430_VOLRA1_SHIFT) |
@@ -113,6 +113,7 @@ static struct prm_setup_vc prm_setup = {
 	/* vdd_vol_ra controls both cmd and vol, set the address equal */
 	.vdd_cmd_ra = (R_VDD2_SR_CONTROL << OMAP3430_VOLRA1_SHIFT) |
 			(R_VDD1_SR_CONTROL << OMAP3430_VOLRA0_SHIFT),
+#endif
 	.vdd_ch_conf = OMAP3430_CMD1 | OMAP3430_RAV1,
 	.vdd_i2c_cfg = OMAP3430_MCODE_SHIFT | OMAP3430_HSEN | OMAP3430_SREN,
 };
@@ -471,6 +472,7 @@ void omap_sram_idle(void)
 	if (pwrdm_read_pwrst(cam_pwrdm) == PWRDM_POWER_ON)
 		omap2_clkdm_deny_idle(mpu_pwrdm->pwrdm_clkdms[0]);
 
+#ifdef CONFIG_OMAP_SMARTREFLEX
 	/*
 	 * Disable smartreflex before entering WFI.
 	 * Only needed if we are going to enter retention or off.
@@ -479,6 +481,7 @@ void omap_sram_idle(void)
 		disable_smartreflex(SR1);
 	if (core_next_state <= PWRDM_POWER_RET)
 		disable_smartreflex(SR2);
+#endif
 
 	/* CORE */
 	if (core_next_state < PWRDM_POWER_ON) {
@@ -561,6 +564,7 @@ void omap_sram_idle(void)
 	}
 	omap3_intc_resume_idle();
 
+#ifdef CONFIG_OMAP_SMARTREFLEX
 	/*
 	 * Enable smartreflex after WFI. Only needed if we entered
 	 * retention or off
@@ -569,6 +573,7 @@ void omap_sram_idle(void)
 		enable_smartreflex(SR1);
 	if (core_next_state <= PWRDM_POWER_RET)
 		enable_smartreflex(SR2);
+#endif
 
 	/* PER */
 	if (per_next_state < PWRDM_POWER_ON) {
