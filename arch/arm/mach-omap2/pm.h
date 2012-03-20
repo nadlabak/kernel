@@ -97,10 +97,14 @@ extern int omap2_pm_debug;
 extern void pm_dbg_update_time(struct powerdomain *pwrdm, int prev);
 extern int pm_dbg_regset_save(int reg_set);
 extern int pm_dbg_regset_init(int reg_set);
+extern void pm_dbg_show_core_regs(void);
+extern void pm_dbg_show_wakeup_source(void);
 #else
 #define pm_dbg_update_time(pwrdm, prev) do {} while (0);
 #define pm_dbg_regset_save(reg_set) do {} while (0);
 #define pm_dbg_regset_init(reg_set) do {} while (0);
+#define pm_dbg_show_core_regs() do {} while (0);
+#define pm_dbg_show_wakeup_source() do {} while (0);
 #endif /* CONFIG_PM_DEBUG */
 
 extern void omap24xx_idle_loop_suspend(void);

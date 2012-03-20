@@ -526,6 +526,19 @@ void omap_sram_idle(void)
 
 	if (regset_save_on_suspend)
 		pm_dbg_regset_save(2);
+	
+	/*
+	* FIXME:
+	* In the case of wakeup from MPU OFF, ROM code will bring EMU clock
+	* domain up, which leads to extra current consumption. So temporarily
+	* work around it until the change from ROM code.
+	*/
+	if (regset_save_on_suspend) {
+		/* Disable WDT1 iclk */
+		cm_rmw_mod_reg_bits(1 << 4, 0, WKUP_MOD, CM_ICLKEN);
+		/* Software supervised sleep on EMU clock domain */
+		cm_rmw_mod_reg_bits(0x3, 0x1, OMAP3430_EMU_MOD, CM_CLKSTCTRL);
+	}
 
 	/* Restore normal SDRC POWER settings */
 	if (omap_rev() >= OMAP3430_REV_ES3_0 &&
@@ -664,6 +677,17 @@ int set_pwrdm_state(struct powerdomain *pwrdm, u32 state)
 	if (cur_state == state)
 		return ret;
 
+	/*
+	 * check if bridge has hibernated? if yes then just return success
+	 * If OFF mode is not enabled, sleep switch is performed for IVA
+	 * which is not necessory.
+	 * REVISIT: Bridge has to set powerstate based on enable_off_mode state
+	 */
+	if (!strcmp(pwrdm->name, "iva2_pwrdm")) {
+		if (cur_state == PWRDM_POWER_OFF)
+			return ret;
+	}
+
 	if (pwrdm_read_pwrst(pwrdm) < PWRDM_POWER_ON) {
 		omap2_clkdm_wakeup(pwrdm->pwrdm_clkdms[0]);
 		sleep_switch = 1;
@@ -767,6 +791,8 @@ restore:
 				"target state %d\n",
 				pwrst->pwrdm->name,
 				pwrdm_read_next_pwrst(pwrst->pwrdm));
+			if (pwrst->pwrdm == core_pwrdm)
+				pm_dbg_show_core_regs();
 			ret = -1;
 		}
 		set_pwrdm_state(pwrst->pwrdm, pwrst->saved_state);
@@ -776,7 +802,7 @@ restore:
 	else {
 		printk(KERN_INFO "Successfully put all powerdomains "
 		       "to target state\n");
-		/* vktx63 : only for debug dump_mod_wkst_reg(); */
+		pm_dbg_show_wakeup_source();
 	}
 
 	return ret;
@@ -1075,6 +1101,10 @@ static void __init prcm_setup_regs(void)
 	prm_write_mod_reg(OMAP3430_IO_EN | OMAP3430_WKUP_EN,
 			  OCP_MOD, OMAP3_PRM_IRQENABLE_MPU_OFFSET);
 
+	/* Enable PM_WKEN to support DSS LPR */
+	prm_write_mod_reg(OMAP3430_PM_WKEN_DSS_EN_DSS,
+				OMAP3430_DSS_MOD, PM_WKEN);
+	
 	/* Enable wakeups in PER */
 	prm_write_mod_reg(OMAP3430_EN_GPIO2 | OMAP3430_EN_GPIO3 |
 			  OMAP3430_EN_GPIO4 | OMAP3430_EN_GPIO5 |

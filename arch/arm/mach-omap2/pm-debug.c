@@ -330,6 +330,165 @@ int pm_dbg_regset_save(int reg_set)
 	return 0;
 }
 
+#define CORE_REGS_LEN 360
+void pm_dbg_show_core_regs(void)
+{
+	int i = 0;
+	int j = 0;
+	unsigned long val = 0;
+	int regs;
+	u32 *ptr;
+	static char core_buf[CORE_REGS_LEN];
+	char *pbuf;
+	
+	if (pm_dbg_reg_set[0] == NULL)
+		return;
+	else
+		ptr = pm_dbg_reg_set[0];
+	
+	memset(core_buf, 0, CORE_REGS_LEN);
+	
+	while (pm_dbg_reg_modules[i].name[0] != 0) {
+		if (strcmp(pm_dbg_reg_modules[i].name, "CORE") ||
+			pm_dbg_reg_modules[i].type != MOD_CM) {
+			ptr += ((pm_dbg_reg_modules[i].high + 4
+			- pm_dbg_reg_modules[i].low)/4);
+		i++;
+		continue;
+			}
+			/* print the core domain CM registers only.*/
+			printk(KERN_INFO "MOD: CM_%s (%08x)\n",
+						 pm_dbg_reg_modules[i].name,
+					(u32)(OMAP3430_CM_BASE +
+					pm_dbg_reg_modules[i].offset));
+			
+			regs = 0;
+			pbuf = core_buf;
+			for (j = pm_dbg_reg_modules[i].low;
+					 j <= pm_dbg_reg_modules[i].high; j += 4) {
+				val = *(ptr++);
+			if (val && (CORE_REGS_LEN-(pbuf-core_buf)) > 20) {
+				pbuf += snprintf(pbuf,
+												 CORE_REGS_LEN-(pbuf-core_buf),
+												 "%02x => %08lx ", j, val);
+				regs++;
+				if (regs % 4 == 0)
+					pbuf += snprintf(pbuf,
+													 CORE_REGS_LEN-(pbuf-core_buf), "\n");
+			}
+					 }
+					 printk(KERN_INFO "%s\n", core_buf);
+					 break;
+	}
+}
+
+#define WAKEUP_SOURCE_LEN 512
+void pm_dbg_show_wakeup_source(void)
+{
+	u32 val = 0;
+	int len = 0;
+	static char buf[WAKEUP_SOURCE_LEN];
+	char *pbuf;
+	u32 gpio_bit = 0;
+	
+	/* print the real wkup sources */
+	memset(buf, 0, WAKEUP_SOURCE_LEN);
+	pbuf = buf;
+	len = WAKEUP_SOURCE_LEN - (pbuf - buf);
+	if (len > 16)
+		pbuf += snprintf(pbuf, len, "WAKEDUP BY: ");
+	
+	val = prm_read_mod_reg(WKUP_MOD, PM_WKST);
+	val &= prm_read_mod_reg(WKUP_MOD, OMAP3430_PM_MPUGRPSEL);
+	len = WAKEUP_SOURCE_LEN - (pbuf - buf);
+	if (val && len > 30)
+		pbuf += snprintf(pbuf, len, "WKUP_MOD(0x%x), ", val);
+	
+	val = prm_read_mod_reg(CORE_MOD, PM_WKST1);
+	val &= prm_read_mod_reg(CORE_MOD, OMAP3430_PM_MPUGRPSEL);
+	len = WAKEUP_SOURCE_LEN - (pbuf - buf);
+	if (val && len > 30)
+		pbuf += snprintf(pbuf, len, "CORE_MOD(0x%x), ", val);
+	
+	val = prm_read_mod_reg(CORE_MOD, OMAP3430ES2_PM_WKST3);
+	val &= prm_read_mod_reg(CORE_MOD, OMAP3430ES2_PM_MPUGRPSEL3);
+	len = WAKEUP_SOURCE_LEN - (pbuf - buf);
+	if (val && len > 30)
+		pbuf += snprintf(pbuf, len, "CORE3_MOD(0x%x), ", val);
+	
+	val = prm_read_mod_reg(OMAP3430_PER_MOD, PM_WKST);
+	val &= prm_read_mod_reg(OMAP3430_PER_MOD, OMAP3430_PM_MPUGRPSEL);
+	len = WAKEUP_SOURCE_LEN - (pbuf - buf);
+	if (val && len > 30)
+		pbuf += snprintf(pbuf, len, "PER_MOD(0x%x), ", val);
+	
+	val = prm_read_mod_reg(OMAP3430ES2_USBHOST_MOD, PM_WKST);
+	val &= prm_read_mod_reg(OMAP3430ES2_USBHOST_MOD, OMAP3430_PM_MPUGRPSEL);
+	len = WAKEUP_SOURCE_LEN - (pbuf - buf);
+	if (val && len > 30)
+		pbuf += snprintf(pbuf, len, "USBHOST(0x%x), ", val);
+	
+	val = prm_read_mod_reg(OCP_MOD, OMAP3_PRM_IRQSTATUS_MPU_OFFSET);
+	len = WAKEUP_SOURCE_LEN - (pbuf - buf);
+	if (val && len > 30)
+		pbuf += snprintf(pbuf, len, "MPU_IRQSTATUS(0x%x), ", val);
+	
+	val = __raw_readl(OMAP2_L4_IO_ADDRESS(OMAP34XX_IC_BASE + (0x0098)));
+	len = WAKEUP_SOURCE_LEN - (pbuf - buf);
+	if (val && len > 30)
+		pbuf += snprintf(pbuf, len, "INTC_IRQ0(0x%x), ", val);
+	
+	len = WAKEUP_SOURCE_LEN - (pbuf - buf);
+	if ((val & (1<<29)) && len > 20) {
+		gpio_bit = __raw_readl(OMAP2_L4_IO_ADDRESS(0x48310018)) &
+		__raw_readl(OMAP2_L4_IO_ADDRESS(0x4831001C));
+		pbuf += snprintf(pbuf, len, "GPIO1(0x%x), ", gpio_bit);
+	}
+	len = WAKEUP_SOURCE_LEN - (pbuf - buf);
+	if ((val & (1<<30)) && len > 20) {
+		gpio_bit = __raw_readl(OMAP2_L4_IO_ADDRESS(0x49050018)) &
+		__raw_readl(OMAP2_L4_IO_ADDRESS(0x4905001C));
+		pbuf += snprintf(pbuf, len, "GPIO2(0x%x), ", gpio_bit);
+	}
+	len = WAKEUP_SOURCE_LEN - (pbuf - buf);
+	if ((val & (1<<31)) && len > 20) {
+		gpio_bit = __raw_readl(OMAP2_L4_IO_ADDRESS(0x49052018)) &
+		__raw_readl(OMAP2_L4_IO_ADDRESS(0x4905201C));
+		pbuf += snprintf(pbuf, len, "GPIO3(0x%x), ", gpio_bit);
+	}
+	
+	val = __raw_readl(OMAP2_L4_IO_ADDRESS(OMAP34XX_IC_BASE + (0x00b8)));
+	len = WAKEUP_SOURCE_LEN - (pbuf - buf);
+	if (val && len > 30)
+		pbuf += snprintf(pbuf, len, "INTC_IRQ1(0x%x), ", val);
+	
+	len = WAKEUP_SOURCE_LEN - (pbuf - buf);
+	if ((val & (1<<0)) && len > 20) {
+		gpio_bit = __raw_readl(OMAP2_L4_IO_ADDRESS(0x49054018)) &
+		__raw_readl(OMAP2_L4_IO_ADDRESS(0x4905401C));
+		pbuf += snprintf(pbuf, len, "GPIO4(0x%x), ", gpio_bit);
+	}
+	len = WAKEUP_SOURCE_LEN - (pbuf - buf);
+	if ((val & (1<<1)) && len > 20) {
+		gpio_bit = __raw_readl(OMAP2_L4_IO_ADDRESS(0x49056018)) &
+		__raw_readl(OMAP2_L4_IO_ADDRESS(0x4905601C));
+		pbuf += snprintf(pbuf, len, "GPIO5(0x%x), ", gpio_bit);
+	}
+	len = WAKEUP_SOURCE_LEN - (pbuf - buf);
+	if ((val & (1<<2)) && len > 20) {
+		gpio_bit = __raw_readl(OMAP2_L4_IO_ADDRESS(0x49058018)) &
+		__raw_readl(OMAP2_L4_IO_ADDRESS(0x4905801C));
+		pbuf += snprintf(pbuf, len, "GPIO6(0x%x), ", gpio_bit);
+	}
+	
+	val = __raw_readl(OMAP2_L4_IO_ADDRESS(OMAP34XX_IC_BASE + (0x00d8)));
+	len = WAKEUP_SOURCE_LEN - (pbuf - buf);
+	if (val && len > 30)
+		pbuf += snprintf(pbuf, len, "INTC_IRQ2(0x%x)", val);
+	
+	printk(KERN_INFO "%s\n", buf);
+}
+
 static const char pwrdm_state_names[][4] = {
 	"OFF",
 	"RET",
