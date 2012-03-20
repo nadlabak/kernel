@@ -788,9 +788,10 @@ restore:
 		state = pwrdm_read_prev_pwrst(pwrst->pwrdm);
 		if (state > pwrdm_read_next_pwrst(pwrst->pwrdm)) {
 			printk(KERN_INFO "Powerdomain (%s) didn't enter "
-				"target state %d\n",
+				"target state %d (remained in %d)\n",
 				pwrst->pwrdm->name,
-				pwrdm_read_next_pwrst(pwrst->pwrdm));
+				pwrdm_read_next_pwrst(pwrst->pwrdm),
+				state);
 			if (pwrst->pwrdm == core_pwrdm)
 				pm_dbg_show_core_regs();
 			ret = -1;
