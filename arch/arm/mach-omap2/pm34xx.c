@@ -265,8 +265,8 @@ static int prcm_clear_mod_irqs(s16 module, u8 regs)
 			 */
 			if (module == OMAP3430ES2_USBHOST_MOD)
 				clken |= 1 << OMAP3430ES2_EN_USBHOST2_SHIFT;
-			if (module != OMAP3430ES2_USBHOST_MOD)
-				cm_set_mod_reg_bits(clken, module, fclk_off);
+
+			cm_set_mod_reg_bits(clken, module, fclk_off);
 			prm_write_mod_reg(wkst, module, wkst_off);
 			wkst = prm_read_mod_reg(module, wkst_off);
 			c++;
@@ -1456,6 +1456,10 @@ static int __init omap3_pm_init(void)
 	register_reboot_notifier(&prcm_notifier);
 	atomic_notifier_chain_register(&panic_notifier_list,
 					&prcm_panic_notifier);
+	
+	sleep_while_idle = 1;
+	enable_off_mode = 1;
+	omap3_pm_off_mode_enable(enable_off_mode);
 err1:
 	return ret;
 err2:
