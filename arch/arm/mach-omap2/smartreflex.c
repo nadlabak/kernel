@@ -45,7 +45,7 @@
 /*OMAP3430 Turbo mode: ARM run at 800Mhz*/
 /*#define SR_TURBO*/
 /*OMAP3430 Highspeed mode: ARM run at 720Mhz*/
-#define SR_HIGHSPEED
+/*#define SR_HIGHSPEED*/
 
 /* MCUDISACK is expected to happen within 1uSec. */
 #define COUNT_TIMEOUT_MCUDISACK		200

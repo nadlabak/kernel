@@ -1105,9 +1105,6 @@ static struct cpufreq_frequency_table freq_table[VDD1_OPP6+1];
 
 #ifdef CONFIG_OMAP3_OVERCLOCK
 
-#define BUF_SIZE PAGE_SIZE
-static char *buf;
-
 static int proc_freq_table_read(char *buffer, char **buffer_location,
 																off_t offset, int count, int *eof, void *data)
 {
@@ -1157,16 +1154,10 @@ static int proc_mpu_opps_write(struct file *filp, const char __user *buffer,
 	if (!mpu_opps)
 		return -EFAULT;
 	
-	
-	if(!len || len >= BUF_SIZE)
+	if(!len)
 		return -ENOSPC;
 	
-	if(copy_from_user(buf, buffer, len))
-		return -EFAULT;
-	
-	buf[len] = 0;
-	
-	if(sscanf(buf, "%d %d %d", &index, &rate, &vsel) == 3) 
+	if(sscanf(buffer, "%d %d %d", &index, &rate, &vsel) == 3) 
 	{
 		if (index < 1 || index > MAX_VDD1_OPP)
 		{
@@ -1206,24 +1197,8 @@ static int proc_mpu_opps_write(struct file *filp, const char __user *buffer,
 static int overclock_init(void)
 {
 	struct proc_dir_entry *proc_entry;
-	int i;
 	
 	printk(KERN_INFO "%s: Loading OMAP3 overclock\n", __func__);
-	
-	//make sure freq_table has same amount of fields as mpu_opps
-	freq_table[MAX_VDD1_OPP].index = MAX_VDD1_OPP;
-	freq_table[MAX_VDD1_OPP].frequency = CPUFREQ_TABLE_END;
-	
-	for(i = 0; freq_table[i].frequency != CPUFREQ_TABLE_END; i++)
-	{}
-	
-	for(; i < MAX_VDD1_OPP; i++)
-	{
-		freq_table[i].index = i;
-		freq_table[i].frequency = freq_table[i-1].frequency;
-	}
-	
-	buf = (char *)vmalloc(BUF_SIZE);
 	
 	proc_mkdir("overclock", NULL);
 	proc_entry = create_proc_read_entry("overclock/freq_table", 0444, NULL, proc_freq_table_read, NULL);
@@ -1242,7 +1217,7 @@ static void omap2_clk_init_cpufreq_table(struct cpufreq_frequency_table **table)
 	if (!mpu_opps)
 		return;
 
-	prcm = mpu_opps + MAX_VDD1_OPP - 1;
+	prcm = mpu_opps + MAX_VDD1_OPP;
 	for (; prcm->rate; prcm--) {
 		freq_table[i].index = i;
 		freq_table[i].frequency = prcm->rate / 1000;
