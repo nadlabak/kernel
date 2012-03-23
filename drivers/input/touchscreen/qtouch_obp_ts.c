@@ -29,6 +29,8 @@
 #include <linux/qtouch_obp_ts.h>
 #include <linux/timer.h>
 
+
+
 #define IGNORE_CHECKSUM_MISMATCH
 
 struct qtm_object {
@@ -232,6 +234,7 @@ static int qtouch_write_addr(struct qtouch_ts_data *ts, uint16_t addr,
 	return 0;
 }
 
+#ifndef IGNORE_CHECKSUM_MISMATCH
 static uint16_t calc_csum(uint16_t curr_sum, void *_buf, int buf_sz)
 {
 	uint8_t *buf = _buf;
@@ -250,6 +253,7 @@ static uint16_t calc_csum(uint16_t curr_sum, void *_buf, int buf_sz)
 
 	return curr_sum;
 }
+#endif
 
 static inline struct qtm_object *find_obj(struct qtouch_ts_data *ts, int id)
 {
@@ -391,6 +395,8 @@ static int qtouch_hw_init(struct qtouch_ts_data *ts)
 			       __func__);
 			return ret;
 		}
+		
+		pr_info("%s: Set num_touch to %d\n", __func__, cfg.num_touch);
 	}
 
 	/* configure the key-array object. */
@@ -1046,8 +1052,10 @@ err_alloc_msg_buf:
 static int qtouch_process_info_block(struct qtouch_ts_data *ts)
 {
 	struct qtm_id_info qtm_info;
+#ifndef IGNORE_CHECKSUM_MISMATCH
 	uint16_t our_csum = 0x0;
 	uint16_t their_csum;
+#endif
 	uint8_t report_id;
 	uint16_t addr;
 	int err;
@@ -1060,8 +1068,9 @@ static int qtouch_process_info_block(struct qtouch_ts_data *ts)
 		pr_err("%s: Cannot read info object block\n", __func__);
 		goto err_read_info_block;
 	}
+#ifndef IGNORE_CHECKSUM_MISMATCH
 	our_csum = calc_csum(our_csum, &qtm_info, sizeof(qtm_info));
-
+#endif
 	/* TODO: Add a version/family/variant check? */
 	pr_info("%s: Build version is 0x%x\n", __func__, qtm_info.version);
 
@@ -1099,7 +1108,9 @@ static int qtouch_process_info_block(struct qtouch_ts_data *ts)
 			err = -EIO;
 			goto err_read_entry;
 		}
+#ifndef IGNORE_CHECKSUM_MISMATCH
 		our_csum = calc_csum(our_csum, &entry, sizeof(entry));
+#endif
 		addr += sizeof(entry);
 
 		entry.size++;
@@ -1147,7 +1158,8 @@ static int qtouch_process_info_block(struct qtouch_ts_data *ts)
 		err = -ENOENT;
 		goto err_missing_objs;
 	}
-
+	
+#ifndef IGNORE_CHECKSUM_MISMATCH
 	err = qtouch_read_addr(ts, addr, &their_csum, sizeof(their_csum));
 	if (err != 0) {
 		pr_err("%s: Unable to read remote checksum\n", __func__);
@@ -1161,11 +1173,10 @@ static int qtouch_process_info_block(struct qtouch_ts_data *ts)
 	if (our_csum != their_csum) {
 		pr_warning("%s: Checksum mismatch (0x%04x != 0x%04x)\n",
 			   __func__, our_csum, their_csum);
-#ifndef IGNORE_CHECKSUM_MISMATCH
 		err = -ENODEV;
 		goto err_bad_checksum;
-#endif
 	}
+#endif
 
 	pr_info("%s: %s found. family 0x%x, variant 0x%x, ver 0x%x, "
 		"build 0x%x, matrix %dx%d, %d objects.\n", __func__,
@@ -1181,7 +1192,10 @@ static int qtouch_process_info_block(struct qtouch_ts_data *ts)
 
 	return 0;
 
+#ifndef IGNORE_CHECKSUM_MISMATCH
 err_no_checksum:
+err_bad_checksum:
+#endif
 err_missing_objs:
 err_no_msg_proc:
 err_read_entry:
@@ -1596,6 +1610,7 @@ static int qtouch_ts_probe(struct i2c_client *client,
 		}
 	}
 
+	qtouch_hw_init(ts);
 	INIT_WORK(&ts->work, qtouch_ts_work_func);
 
 	if (ts->pdata->flags & QTOUCH_USE_KEYARRAY) {
