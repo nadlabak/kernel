@@ -168,7 +168,7 @@ typedef struct OMAPLFB_FBINFO_TAG
 
 typedef struct OMAPLFB_DEVINFO_TAG
 {
-	unsigned long           ulDeviceID;
+	IMG_UINT32          uDeviceID;
 
 	
 	OMAPLFB_BUFFER          sSystemBuffer;

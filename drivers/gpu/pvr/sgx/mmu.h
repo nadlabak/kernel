@@ -1,6 +1,6 @@
 /**********************************************************************
  *
- * Copyright(c) 2008 Imagination Technologies Ltd. All rights reserved.
+ * Copyright (C) Imagination Technologies Ltd. All rights reserved.
  * 
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -42,13 +42,14 @@ MMU_InsertHeap(MMU_CONTEXT *psMMUContext, MMU_HEAP *psMMUHeap);
 MMU_HEAP *
 MMU_Create (MMU_CONTEXT *psMMUContext,
 			DEV_ARENA_DESCRIPTOR *psDevArena,
-			RA_ARENA **ppsVMArena);
+			RA_ARENA **ppsVMArena,
+			PDUMP_MMU_ATTRIB **ppsMMUAttrib);
 
 IMG_VOID
-MMU_Delete (MMU_HEAP *pMMU);
+MMU_Delete (MMU_HEAP *pMMUHeap);
 
 IMG_BOOL
-MMU_Alloc (MMU_HEAP *pMMU,
+MMU_Alloc (MMU_HEAP *pMMUHeap,
            IMG_SIZE_T uSize,
            IMG_SIZE_T *pActualSize,
            IMG_UINT32 uFlags,
@@ -56,28 +57,28 @@ MMU_Alloc (MMU_HEAP *pMMU,
            IMG_DEV_VIRTADDR *pDevVAddr);
 
 IMG_VOID
-MMU_Free (MMU_HEAP *pMMU,
+MMU_Free (MMU_HEAP *pMMUHeap,
           IMG_DEV_VIRTADDR DevVAddr,
 		  IMG_UINT32 ui32Size);
 
 IMG_VOID 
-MMU_Enable (MMU_HEAP *pMMU);
+MMU_Enable (MMU_HEAP *pMMUHeap);
 
 IMG_VOID 
-MMU_Disable (MMU_HEAP *pMMU);
+MMU_Disable (MMU_HEAP *pMMUHeap);
 
 IMG_VOID
-MMU_MapPages (MMU_HEAP *pMMU,
-			  IMG_DEV_VIRTADDR devVAddr,
+MMU_MapPages (MMU_HEAP *pMMUHeap,
+			  IMG_DEV_VIRTADDR DevVAddr,
 			  IMG_SYS_PHYADDR SysPAddr,
 			  IMG_SIZE_T uSize,
 			  IMG_UINT32 ui32MemFlags,
 			  IMG_HANDLE hUniqueTag);
 
 IMG_VOID
-MMU_MapShadow (MMU_HEAP          * pMMU,
+MMU_MapShadow (MMU_HEAP          * pMMUHeap,
                IMG_DEV_VIRTADDR    MapBaseDevVAddr,
-               IMG_SIZE_T          uSize, 
+               IMG_SIZE_T          uByteSize, 
                IMG_CPU_VIRTADDR    CpuVAddr,
                IMG_HANDLE          hOSMemHandle,
                IMG_DEV_VIRTADDR  * pDevVAddr,
@@ -85,13 +86,13 @@ MMU_MapShadow (MMU_HEAP          * pMMU,
                IMG_HANDLE          hUniqueTag);
 
 IMG_VOID
-MMU_UnmapPages (MMU_HEAP *pMMU,
-             IMG_DEV_VIRTADDR dev_vaddr,
+MMU_UnmapPages (MMU_HEAP *psMMUHeap,
+             IMG_DEV_VIRTADDR sDevVAddr,
              IMG_UINT32 ui32PageCount,
              IMG_HANDLE hUniqueTag);
 
 IMG_VOID
-MMU_MapScatter (MMU_HEAP *pMMU,
+MMU_MapScatter (MMU_HEAP *pMMUHeap,
 				IMG_DEV_VIRTADDR DevVAddr,
 				IMG_SYS_PHYADDR *psSysAddr,
 				IMG_SIZE_T uSize,
@@ -123,17 +124,31 @@ PVRSRV_ERROR MMU_BIFResetPDAlloc(PVRSRV_SGXDEV_INFO *psDevInfo);
 IMG_VOID MMU_BIFResetPDFree(PVRSRV_SGXDEV_INFO *psDevInfo);
 
 #if defined(FIX_HW_BRN_22997) && defined(FIX_HW_BRN_23030) && defined(SGX_FEATURE_HOST_PORT)
-PVRSRV_ERROR WorkaroundBRN22997Alloc(PVRSRV_SGXDEV_INFO *psDevInfo);
+PVRSRV_ERROR WorkaroundBRN22997Alloc(PVRSRV_DEVICE_NODE	*psDeviceNode);
 
 IMG_VOID WorkaroundBRN22997ReadHostPort(PVRSRV_SGXDEV_INFO *psDevInfo);
 
-IMG_VOID WorkaroundBRN22997Free(PVRSRV_SGXDEV_INFO *psDevInfo);
+IMG_VOID WorkaroundBRN22997Free(PVRSRV_DEVICE_NODE *psDeviceNode);
 #endif 
 
 #if defined(SUPPORT_EXTERNAL_SYSTEM_CACHE)
 PVRSRV_ERROR MMU_MapExtSystemCacheRegs(PVRSRV_DEVICE_NODE *psDeviceNode);
 
 PVRSRV_ERROR MMU_UnmapExtSystemCacheRegs(PVRSRV_DEVICE_NODE *psDeviceNode);
+#endif 
+
+IMG_BOOL MMU_IsHeapShared(MMU_HEAP* pMMU_Heap);
+
+#if defined(FIX_HW_BRN_31620)
+IMG_VOID MMU_GetCacheFlushRange(MMU_CONTEXT *pMMUContext, IMG_UINT32 *pui32RangeMask);
+
+IMG_VOID MMU_GetPDPhysAddr(MMU_CONTEXT *pMMUContext, IMG_DEV_PHYADDR *psDevPAddr);
+
+#endif
+
+
+#if defined(PDUMP)
+IMG_UINT32 MMU_GetPDumpContextID(IMG_HANDLE hDevMemContext);
 #endif 
 
 #endif 

@@ -1,53 +1,89 @@
 #
-ccflags-y = -DLINUX -D__linux__ -Idrivers/gpu/pvr -Idrivers/gpu/pvr/omap3 \
+ccflags-y = -DLINUX -D__linux__ -Idrivers/gpu/pvr \
 	-DANDROID \
-	-DPVR_BUILD_DIR="\"omap3430_android\"" \
+	-DPVR_BUILD_DIR="\"omap_sgx_android\"" \
 	-DSGX_DYNAMIC_TIMING_INFO \
 	-DSYS_CUSTOM_POWERLOCK_WRAP \
 	-DSERVICES4 \
-	-DPVR2D_VALIDATE_INPUT_PARAMS \
-	-DPVR_PROC_USE_SEQ_FILE \
 	-DSUPPORT_SRVINIT \
 	-DSUPPORT_PERCONTEXT_PB \
 	-DTRANSFER_QUEUE \
 	-DSYS_USING_INTERRUPTS \
-	-DSUPPORT_HW_RECOVERY \
+	-DSUPPORT_LINUX_X86_WRITECOMBINE \
+	-DSUPPORT_LINUX_X86_PAT \
 	-DPVR_SECURE_HANDLES \
 	-DPVR_SECURE_FD_EXPORT \
-	-DSUPPORT_SGX_EVENT_OBJECT \
 	-DLDM_PLATFORM \
-	-DPVR2D_ALT_2DHW \
 	-DSUPPORT_SGX_HWPERF \
-	-DSUPPORT_SGX_LOW_LATENCY_SCHEDULING \
-	-DPVR_LINUX_MISR_USING_WORKQUEUE \
-	-DSUPPORT_CPU_CACHED_BUFFERS \
-	-DSUPPORT_CACHEFLUSH_ON_ALLOC \
 	-DSUPPORT_MEMINFO_IDS \
 	-DDISPLAY_CONTROLLER=omaplfb \
-	-DSYS_SGX_ACTIVE_POWER_LATENCY_MS=100 \
-	-DPVR_BUILD_DATE=""
+	-DSYS_SGX_ACTIVE_POWER_LATENCY_MS=2 \
+	-DPVR_BUILD_DATE="" \
+	-DSUPPORT_SGX \
+	-DCLIENT_DRIVER_DEFAULT_WAIT_RETRIES=50 \
+	-DPVR_LINUX_TIMERS_USING_WORKQUEUES \
+	-DFLIP_TECHNIQUE_OVERLAY \
+	-DPVR_LINUX_USING_WORKQUEUES \
+	-DPVR_LINUX_MISR_USING_PRIVATE_WORKQUEUE \
+	-DSUPPORT_SGX_NEW_STATUS_VALS \
+	-DSGX_EARLYSUSPEND \
+	-DPVR_NO_OMAP_TIMER \
+	-DSUPPORT_SGX_LOW_LATENCY_SCHEDULING \
+	-DPVRSRV_MODNAME="\"pvrsrvkm"\"
 
-ccflags-$(CONFIG_PVR_APM) += -DSUPPORT_ACTIVE_POWER_MANAGEMENT
+ccflags-$(CONFIG_SGX540) +=  -Idrivers/gpu/pvr/omap4  -Idrivers/gpu/pvr/sgx \
+	-DSGX_CLK_CORE_DIV5 \
+	-DSGX540 -DSUPPORT_SGX540
 
-ccflags-$(CONFIG_SGX_EDM_TRACING) += -DPVRSRV_USSE_EDM_STATUS_DEBUG
+ccflags-$(CONFIG_SGX_REV110) += -DSGX_CORE_REV=110
+ccflags-$(CONFIG_SGX_REV120) += -DSGX_CORE_REV=120
 
-ccflags-$(CONFIG_SGX_MK_TRACE) += -DPVRSRV_DUMP_MK_TRACE
+ccflags-$(CONFIG_SGX530) +=  -Idrivers/gpu/pvr/omap3  -Idrivers/gpu/pvr/sgx \
+	-DSGX530 -DSUPPORT_SGX530
 
-ccflags-$(CONFIG_SGX_BUILD_RELEASE) += \
-	-DPVR_BUILD_TYPE="\"release\""  -DRELEASE
+ccflags-$(CONFIG_SGX_REV125) += -DSGX_CORE_REV=125
+ccflags-$(CONFIG_SGX_REV121) += -DSGX_CORE_REV=121
 
-ccflags-$(CONFIG_SGX_BUILD_DEBUG) += \
+ccflags-$(CONFIG_SGX_530_BUILD_RELEASE) += \
+	-DPVR_BUILD_TYPE="\"release\"" \
+	-DRELEASE \
+	-DSUPPORT_ACTIVE_POWER_MANAGEMENT \
+	-DSYS_OMAP3430_PIN_MEMORY_BUS_CLOCK \
+	-DSUPPORT_HW_RECOVERY
+
+ccflags-$(CONFIG_SGX_530_BUILD_DEBUG) += \
 	-DPVR_BUILD_TYPE="\"debug\""  -DDEBUG \
 	-DDEBUG_LINUX_MEMORY_ALLOCATIONS \
 	-DDEBUG_LINUX_MEM_AREAS \
 	-DDEBUG_LINUX_MMAP_AREAS \
 	-DDEBUG_BRIDGE_KM \
-	-DDLL_METRIC=1
+	-DPVRSRV_USSE_EDM_STATUS_DEBUG \
+	-DPVRSRV_DUMP_MK_TRACE \
+	-DDEBUG_LOG_PATH_TRUNCATE="\"eurasia_km\""
 
-ccflags-$(CONFIG_SGX) += -Idrivers/gpu/pvr/sgx \
-	-DSGX_CORE_REV=121 \
-	-DSUPPORT_SGX \
-	-DSGX530 -DSUPPORT_SGX530
+ccflags-$(CONFIG_SGX_540_BUILD_RELEASE) += \
+	-DPVR_BUILD_TYPE="\"release\"" \
+	-DRELEASE \
+	-DSUPPORT_ACTIVE_POWER_MANAGEMENT \
+	-DSUPPORT_HW_RECOVERY \
+	-DPVR_NO_FULL_CACHE_OPS
+
+ccflags-$(CONFIG_SGX_540_BUILD_DEBUG) += \
+	-DPVR_BUILD_TYPE="\"debug\""  -DDEBUG \
+	-DDEBUG_LINUX_MEMORY_ALLOCATIONS \
+	-DDEBUG_LINUX_MEM_AREAS \
+	-DDEBUG_LINUX_MMAP_AREAS \
+	-DDEBUG_BRIDGE_KM \
+	-DPVRSRV_USSE_EDM_STATUS_DEBUG \
+	-DPVRSRV_DUMP_MK_TRACE \
+	-DSUPPORT_ACTIVE_POWER_MANAGEMENT \
+	-DPVR_NO_FULL_CACHE_OPS \
+	-DSUPPORT_HW_RECOVERY \
+	-DDEBUG_LOG_PATH_TRUNCATE="\"eurasia_km\""
+
+ccflags-$(CONFIG_SGX_PDUMP) += -Idrivers/gpu/pvr/pdump \
+	-DPDUMP \
+	-DSUPPORT_DBGDRV_EVENT_OBJECTS
 
 pvr_common-y := \
 	osfunc.o \
@@ -79,11 +115,18 @@ pvr_common-y := \
 	bridged_pvr_bridge.o \
 	perproc.o \
 	lists.o \
+	mem_debug.o \
+	osfunc_common.o
+
+pvr540-$(CONFIG_SGX540) := \
+	omap4/sysconfig.o \
+	omap4/sysutils.o
+
+pvr530-$(CONFIG_SGX530) := \
 	omap3/sysconfig.o \
 	omap3/sysutils.o
 
-
-sgx-y    :=  \
+sgx-y :=  \
 	sgx/bridged_sgx_bridge.o \
 	sgx/sgxinit.o \
 	sgx/sgxpower.o \
@@ -94,9 +137,24 @@ sgx-y    :=  \
 	sgx/mmu.o \
 	sgx/pb.o
 
+sgx_displayclass-y := \
+	display/omap_sgx_displayclass.o \
+	display/omap_display.o
+
 omaplfb-y := \
 	omaplfb/omaplfb_displayclass.o \
 	omaplfb/omaplfb_linux.o
 
-obj-$(CONFIG_SGX)	+= pvr_common.o sgx.o
-obj-$(CONFIG_PVR_OMAPLFB) += omaplfb.o
+dbgdrv-$(CONFIG_SGX_PDUMP) := \
+	pdump/main.o \
+	pdump/dbgdriv.o \
+	pdump/ioctl.o \
+	pdump/handle.o \
+	pdump/hostfunc.o \
+	pdump/hotkey.o
+
+obj-$(CONFIG_SGX540) := pvr_common.o sgx.o omaplfb.o pvr540.o
+obj-$(CONFIG_SGX530) := pvr_common.o sgx.o omaplfb.o pvr530.o
+obj-$(CONFIG_VIRTUAL_DISPLAY_SUPPORT) := pvr_common.o sgx.o \
+	sgx_displayclass.o pvr540.o
+obj-$(CONFIG_SGX_PDUMP) += dbgdrv.o

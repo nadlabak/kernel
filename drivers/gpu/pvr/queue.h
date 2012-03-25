@@ -1,6 +1,6 @@
 /**********************************************************************
  *
- * Copyright(c) 2008 Imagination Technologies Ltd. All rights reserved.
+ * Copyright (C) Imagination Technologies Ltd. All rights reserved.
  * 
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -33,8 +33,8 @@ extern "C" {
 #endif
 
 #define UPDATE_QUEUE_ROFF(psQueue, ui32Size)						\
-	psQueue->ui32ReadOffset = (psQueue->ui32ReadOffset + ui32Size)	\
-	& (psQueue->ui32QueueSize - 1);
+	(psQueue)->ui32ReadOffset = ((psQueue)->ui32ReadOffset + (ui32Size))	\
+	& ((psQueue)->ui32QueueSize - 1);
 
  typedef struct _COMMAND_COMPLETE_DATA_
  {
@@ -51,20 +51,13 @@ extern "C" {
 IMG_VOID QueueDumpDebugInfo(IMG_VOID);
 
 IMG_IMPORT
-PVRSRV_ERROR PVRSRVProcessQueues (IMG_UINT32	ui32CallerID,
-								  IMG_BOOL		bFlush);
+PVRSRV_ERROR PVRSRVProcessQueues (IMG_BOOL		bFlush);
 
 #if defined(__linux__) && defined(__KERNEL__) 
 #include <linux/types.h>
 #include <linux/seq_file.h>
-off_t
-QueuePrintQueues (IMG_CHAR * buffer, size_t size, off_t off);
-
-#ifdef PVR_PROC_USE_SEQ_FILE
 void* ProcSeqOff2ElementQueue(struct seq_file * sfile, loff_t off);
 void ProcSeqShowQueue(struct seq_file *sfile,void* el);
-#endif
-
 #endif
 
 
@@ -96,8 +89,6 @@ PVRSRV_ERROR IMG_CALLCONV PVRSRVSubmitCommandKM(PVRSRV_QUEUE_INFO *psQueue,
 
 IMG_IMPORT
 IMG_VOID PVRSRVCommandCompleteKM(IMG_HANDLE hCmdCookie, IMG_BOOL bScheduleMISR);
-
-IMG_VOID PVRSRVCommandCompleteCallbacks(IMG_VOID);
 
 IMG_IMPORT
 PVRSRV_ERROR PVRSRVRegisterCmdProcListKM(IMG_UINT32		ui32DevIndex,
