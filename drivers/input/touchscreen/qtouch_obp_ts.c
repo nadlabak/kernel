@@ -28,8 +28,7 @@
 #include <linux/platform_device.h>
 #include <linux/qtouch_obp_ts.h>
 #include <linux/timer.h>
-
-
+#include <linux/proc_fs.h>
 
 #define IGNORE_CHECKSUM_MISMATCH
 
@@ -101,6 +100,7 @@ static void qtouch_ts_early_suspend(struct early_suspend *handler);
 static void qtouch_ts_late_resume(struct early_suspend *handler);
 #endif
 
+static struct qtouch_ts_data qtouch_ts_dat;
 static struct workqueue_struct *qtouch_ts_wq;
 
 static struct timer_list keyarray_timer;
@@ -352,6 +352,39 @@ static int qtouch_power_config(struct qtouch_ts_data *ts, int on)
 				 min(sizeof(pwr_cfg), obj->entry.size));
 }
 
+static int proc_qtouch_num_read(char *buffer, char **buffer_location, off_t offset, int count, int *eof, void *data) 
+{
+	int ret;
+	
+	if (offset > 0)
+		ret = 0;
+	else
+		ret = scnprintf(buffer, count, "%u\n", qtouch_ts_dat.pdata->multi_touch_cfg.num_touch);
+	
+	return ret;
+}
+
+static int proc_qtouch_num_write(struct file *filp, const char __user *buffer, unsigned long len, void *data) 
+{
+	unsigned int new_num_touch;
+
+	if (sscanf(buffer, "%u", &new_num_touch) == 1) {
+		if (new_num_touch > 10) 
+			new_num_touch = 10;
+		else if (new_num_touch < 2) 
+			new_num_touch = 2;
+		
+		if (qtouch_ts_dat.pdata->multi_touch_cfg.num_touch != new_num_touch) {
+			qtouch_ts_dat.pdata->multi_touch_cfg.num_touch = new_num_touch;
+			qtouch_force_reset(&qtouch_ts_dat, 0);
+		}
+	} 
+	else
+		printk(KERN_INFO "qtouh_num: wrong parameter for num_touch\n");
+	
+	return len;
+}
+
 /* Apply the configuration provided in the platform_data to the hardware */
 static int qtouch_hw_init(struct qtouch_ts_data *ts)
 {
@@ -383,16 +416,17 @@ static int qtouch_hw_init(struct qtouch_ts_data *ts)
 	obj = find_obj(ts, QTM_OBJ_TOUCH_MULTI);
 	if (obj && obj->entry.num_inst > 0) {
 		struct qtm_touch_multi_cfg cfg;
+		
 		memcpy(&cfg, &ts->pdata->multi_touch_cfg, sizeof(cfg));
 		if (ts->pdata->flags & QTOUCH_USE_MULTITOUCH)
 			cfg.ctrl |= (1 << 1) | (1 << 0); /* reporten | enable */
 		else
 			cfg.ctrl = 0;
-		ret = qtouch_write_addr(ts, obj->entry.addr, &cfg,
-					min(sizeof(cfg), obj->entry.size));
+			
+		ret = qtouch_write_addr(ts, obj->entry.addr, &cfg, min(sizeof(cfg), obj->entry.size));
 		if (ret != 0) {
 			pr_err("%s: Can't write multi-touch config\n",
-			       __func__);
+						 __func__);
 			return ret;
 		}
 		
@@ -1489,6 +1523,7 @@ static int qtouch_ts_probe(struct i2c_client *client,
 {
 	struct qtouch_ts_platform_data *pdata = client->dev.platform_data;
 	struct qtouch_ts_data *ts;
+	struct proc_dir_entry *proc_entry;
 	int err;
 	unsigned char boot_info;
 	int loop_count;
@@ -1509,11 +1544,9 @@ static int qtouch_ts_probe(struct i2c_client *client,
 		return -ENODEV;
 	}
 
-	ts = kzalloc(sizeof(struct qtouch_ts_data), GFP_KERNEL);
-	if (ts == NULL) {
-		err = -ENOMEM;
-		goto err_alloc_data_failed;
-	}
+	ts = &qtouch_ts_dat;
+	memset(ts, 0, sizeof(struct qtouch_ts_data));
+	
 	ts->pdata = pdata;
 	ts->client = client;
 	i2c_set_clientdata(client, ts);
@@ -1713,6 +1746,11 @@ finish_touch_setup:
 	register_early_suspend(&ts->early_suspend);
 #endif
 
+	/* Create procfs node to allow chaning number of touchpoints*/
+	proc_mkdir("qtouch", NULL);
+	proc_entry = create_proc_read_entry("qtouch/num_touch", 0644, NULL, proc_qtouch_num_read, NULL);
+	proc_entry->write_proc = proc_qtouch_num_write;
+	
 	return 0;
 
 err_create_fw_version_file_failed:
@@ -1878,6 +1916,10 @@ static void __exit qtouch_ts_exit(void)
 	i2c_del_driver(&qtouch_ts_driver);
 	if (qtouch_ts_wq)
 		destroy_workqueue(qtouch_ts_wq);
+	
+	/* Remove proc entries */
+	remove_proc_entry("qtouch/num_touch", NULL);
+	remove_proc_entry("qtouch", NULL);
 }
 
 module_init(qtouch_ts_init);
