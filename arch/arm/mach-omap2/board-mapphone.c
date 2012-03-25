@@ -513,7 +513,7 @@ static struct android_usb_product factory_usb_products[] = {
 static struct android_usb_platform_data andusb_plat = {
 	.vendor_id      = 0x22b8,
 	.product_id     = 0x41DA,
-	.product_name   = "A853-cust",
+	.product_name   = "A853",
 	.manufacturer_name	= "Motorola",
 	.serial_number		= device_serial,
 	.num_products = ARRAY_SIZE(usb_products),
@@ -545,7 +545,7 @@ static struct platform_device androidusb_device = {
 
 static struct usb_mass_storage_platform_data usbms_plat = {
 	.vendor			= "Motorola",
-	.product		= "A853-cust",
+	.product		= "A853",
 	.release		= 1,
 };
 
@@ -2860,6 +2860,13 @@ static void __init mapphone_init(void)
 	int ret = 0;
 	struct kobject *properties_kobj = NULL;
 
+	/* Use A853 NS product name if omap is not in HS mode */
+	if (omap_type() != OMAP2_DEVICE_TYPE_SEC)
+	{
+		andusb_plat.product_name = "A853 NS";
+		usbms_plat.product = "A853 NS";
+	}
+	
 	omap_board_config = mapphone_config;
 	omap_board_config_size = ARRAY_SIZE(mapphone_config);
 
