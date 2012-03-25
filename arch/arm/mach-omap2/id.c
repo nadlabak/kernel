@@ -18,6 +18,7 @@
 #include <linux/kernel.h>
 #include <linux/init.h>
 #include <linux/io.h>
+#include <linux/swab.h>
 
 #include <asm/cputype.h>
 
@@ -273,6 +274,7 @@ void __init omap3_check_revision(void)
 
 void __init omap3_cpuinfo(void)
 {
+	int i;
 	u8 rev = GET_OMAP_REVISION();
 	char cpu_name[16], cpu_rev[16];
 
@@ -358,6 +360,13 @@ void __init omap3_cpuinfo(void)
 			pr_info("OMAP is in unknown mode\n");
 			break;
 	}
+	
+	pr_info("OMAP root key hash: ");
+	
+	for (i = 0; i < 5; i++)
+		printk("%08x", __swab32(omap_ctrl_readl(OMAP2_CONTROL_RPUB_KEY_H_0 + i*4)));
+	
+	printk("\n");
 }
 
 /*
