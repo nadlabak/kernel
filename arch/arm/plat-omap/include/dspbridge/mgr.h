@@ -231,4 +231,8 @@
  */
        extern bool MGR_Init(void);
 
+#ifdef CONFIG_BRIDGE_RECOVERY
+       extern void bridge_recovery_notify(u32 ulEventMask);
+#endif
+
 #endif				/* MGR_ */

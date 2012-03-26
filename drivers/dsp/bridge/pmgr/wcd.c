@@ -137,6 +137,10 @@
 #include <dspbridge/resourcecleanup.h>
 #endif
 
+#include <dspbridge/dbdcd.h>
+#include <_tiomap.h>
+#include <_tiomap_pwr.h>
+
 /*  ----------------------------------- Defines, Data Structures, Typedefs */
 #define MAX_TRACEBUFLEN 255
 #define MAX_LOADARGS    16
@@ -177,6 +181,7 @@ static struct WCD_Cmd WCD_cmdTable[] = {
 	{MGRWRAP_WaitForBridgeEvents, CMD_MGR_WAIT_OFFSET},
 #ifndef RES_CLEANUP_DISABLE
 	{MGRWRAP_GetProcessResourcesInfo, CMD_MGR_RESOUCES_OFFSET},
+	{MGRWRAP_Force_Recovery, CMD_MGR_FORCE_RECOVERY_OFFSET},
 #endif
 	/* PROC Module */
 	{PROCWRAP_Attach, CMD_PROC_ATTACH_OFFSET},
@@ -806,6 +811,25 @@ u32 PROCWRAP_InvalidateMemory(union Trapped_Args *args, void *pr_ctxt)
 	return status;
 }
 
+
+u32 MGRWRAP_Force_Recovery(union Trapped_Args *args, void *pr_ctxt)
+{
+	DSP_STATUS status = DSP_SOK ;
+	struct DEV_OBJECT *hDevObject;
+	struct WMD_DEV_CONTEXT *dwContext;
+
+	hDevObject = DEV_GetFirst();	/* default */
+	DEV_GetWMDContext(hDevObject, &dwContext);
+
+	/* Set the Board state as ERROR */
+	dwContext->dwBrdState = BRD_ERROR;
+	/* Disable all the clocks that were enabled by DSP */
+	(void)DSP_PeripheralClocks_Disable(dwContext, NULL);
+
+	bridge_recovery_notify(DSP_SYSERROR) ;
+
+	return status ;
+}
 
 /*
  * ======== PROCWRAP_EnumResources ========

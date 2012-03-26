@@ -28,6 +28,9 @@
 #ifndef _TIOMAP_PWR_
 #define _TIOMAP_PWR_
 
+extern unsigned long min_active_opp_freq;
+
+
 /*
  * ======== WakeDSP =========
  * Wakes up the DSP from DeepSleep

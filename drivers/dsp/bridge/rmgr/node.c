@@ -1399,6 +1399,12 @@ DSP_STATUS NODE_Create(struct NODE_OBJECT *hNode)
 				pIntfFxns = hNodeMgr->pIntfFxns;
 				(*pIntfFxns->pfnMsgSetQueueId)(hNode->hMsgQueue,
 				hNode->nodeEnv);
+			} else if (hNode->fLoaded) {
+				printk(KERN_INFO "DISP_NodeCreate failed %x\n"
+					, status);
+				hNodeMgr->nldrFxns.pfnUnload(hNode->hNldrNode,
+							      NLDR_CREATE);
+				hNode->fLoaded = false;
 			}
 		}
 	}
@@ -1668,9 +1674,13 @@ DSP_STATUS NODE_Delete(struct NODE_OBJECT *hNode,
 			}
 		}
 func_cont1:
-		if (DSP_SUCCEEDED(status)) {
-			/* Unblock a thread trying to terminate the node */
-			(void)SYNC_SetEvent(hNode->hSyncDone);
+		if (DSP_FAILED(status))
+			goto cont2;
+
+		/* Unblock a thread trying to terminate the node */
+		(void)SYNC_SetEvent(hNode->hSyncDone);
+
+		if (hNode->fLoaded) {
 			if (procId == DSP_UNIT) {
 				/* ulDeleteFxn = address of node's delete
 				 * function */
@@ -1716,6 +1726,7 @@ func_cont1:
 			}
 		}
 	}
+cont2:
 	/* Free host side resources even if a failure occurred */
 	/* Remove node from hNodeMgr->nodeList */
 	LST_RemoveElem(hNodeMgr->nodeList, (struct LST_ELEM *) hNode);
@@ -2198,8 +2209,11 @@ void NODE_OnExit(struct NODE_OBJECT *hNode, s32 nStatus)
 	if (!MEM_IsValidHandle(hNode, NODE_SIGNATURE)) {
 		return;
 	}
-	/* Set node state to done */
-	NODE_SetState(hNode, NODE_DONE);
+	/*
+	 * Set node state to deleting, in case of failure resource cleanup
+	 * will clean it up.
+	 */
+	NODE_SetState(hNode, NODE_DELETING);
 	hNode->nExitStatus = nStatus;
 	if (hNode->fLoaded && hNode->fPhaseSplit) {
 		(void)hNode->hNodeMgr->nldrFxns.pfnUnload(hNode->hNldrNode,
@@ -3492,3 +3506,12 @@ static u32 Write(void *pPrivRef, u32 ulDspAddr, void *pBuf,
 	return ulNumBytes;
 }
 
+void clear_loadref(void)
+{
+	struct DEV_OBJECT *hDevObject;
+	struct NODE_MGR *phNodeMgr;
+
+	hDevObject = DEV_GetFirst();
+	DEV_GetNodeManager(hDevObject, &phNodeMgr);
+	clear_loadref_ndlr(phNodeMgr->hNldr);
+}

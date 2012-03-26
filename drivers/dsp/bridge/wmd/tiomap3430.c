@@ -96,8 +96,6 @@
 
 #define MMU_GFLUSH 0x60
 
-extern unsigned short min_active_opp;
-
 /* Forward Declarations: */
 static DSP_STATUS WMD_BRD_Monitor(struct WMD_DEV_CONTEXT *pDevContext);
 static DSP_STATUS WMD_BRD_Read(struct WMD_DEV_CONTEXT *pDevContext,
@@ -729,7 +727,8 @@ static DSP_STATUS WMD_BRD_Start(struct WMD_DEV_CONTEXT *hDevContext,
 		 * Bump OPP to the minimal require by DSP before running.
 		 */
 		if (pdata->dsp_set_min_opp)
-			(*pdata->dsp_set_min_opp)(min_active_opp);
+			(*pdata->dsp_set_min_opp)(&omap_dspbridge_dev->dev,
+					min_active_opp_freq);
 #endif
 
 		/* release the RST1, DSP starts executing now .. */
