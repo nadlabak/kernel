@@ -562,10 +562,7 @@ void dsi_irq_handler(void)
 		spin_lock(&dsi.errors_lock);
 		dsi.errors |= irqstatus & DSI_IRQ_ERROR_MASK;
 		spin_unlock(&dsi.errors_lock);
-		if (irqstatus & DSI_IRQ_TA_TIMEOUT)
-		{
-			schedule_error_recovery();
-		}
+		schedule_error_recovery();
 	} else if (debug_irq) {
 		print_irq_status(irqstatus);
 	}
@@ -591,12 +588,8 @@ void dsi_irq_handler(void)
 		if (vcstatus & DSI_VC_IRQ_ERROR_MASK) {
 			DSSERR("DSI VC(%d) error, vc irqstatus %x\n",
 				       i, vcstatus);
-			if (vcstatus & DSI_VC_IRQ_BTA)
-			{
-				schedule_error_recovery();
-			}
-
 			print_irq_status_vc(i, vcstatus);
+			schedule_error_recovery();
 		} else if (debug_irq) {
 			print_irq_status_vc(i, vcstatus);
 		}
@@ -1916,7 +1909,6 @@ static u16 dsi_vc_flush_receive_data(int channel)
 		if (dt == DSI_DT_RX_ACK_WITH_ERR) {
 			u16 err = FLD_GET(val, 23, 8);
 			dsi_show_rx_ack_with_err(err);
-			schedule_error_recovery();
 		} else if (dt == DSI_DT_RX_SHORT_READ_1) {
 			DSSDBG("\tDCS short response, 1 byte: %#x\n",
 					FLD_GET(val, 23, 8));
