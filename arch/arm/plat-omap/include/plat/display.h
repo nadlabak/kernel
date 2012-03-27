@@ -299,6 +299,19 @@ struct omap_dsi_video_timings {
 	u16 vbp;        /* Vertical back porch */
 };
 
+struct omap_dsi_hs_mode_timing {
+	/* time in nsec */
+	u32 ths_prepare;
+	u32 ths_prepare_ths_zero;
+	u32 ths_trail;
+	u32 ths_exit;
+	u32 tlpx_half;
+	u32 tclk_trail;
+	u32 tclk_prepare;
+	u32 tclk_zero;
+};
+
+
 #ifdef CONFIG_OMAP2_DSS_VENC
 /* Hardcoded timings for tv modes. Venc only uses these to
  * identify the mode, and does not actually use the configs
@@ -445,6 +458,7 @@ struct omap_dss_device {
 			u8 ext_te_gpio;
 			bool xfer_mode;
 			struct omap_dsi_video_timings vm_timing;
+			struct omap_dsi_hs_mode_timing hs_timing;
 		} dsi;
 
 		struct {
@@ -537,6 +551,7 @@ struct omap_dss_device {
 	int (*memory_read)(struct omap_dss_device *dssdev,
 			void *buf, size_t size,
 			u16 x, u16 y, u16 w, u16 h);
+	bool (*sw_te_sup)(struct omap_dss_device *dssdev);
 
 	int (*set_wss)(struct omap_dss_device *dssdev, u32 wss);
 	u32 (*get_wss)(struct omap_dss_device *dssdev);
@@ -563,6 +578,8 @@ struct omap_dss_driver {
 
 	void (*setup_update)(struct omap_dss_device *dssdev,
 			u16 x, u16 y, u16 w, u16 h);
+	int (*hs_mode_timing)(struct omap_dss_device *display);
+	bool (*manual_te_trigger)(struct omap_dss_device *display);
 
 	int (*enable_te)(struct omap_dss_device *dssdev, bool enable);
 	int (*wait_for_te)(struct omap_dss_device *dssdev);
@@ -576,6 +593,11 @@ struct omap_dss_driver {
 	int (*memory_read)(struct omap_dss_device *dssdev,
 			void *buf, size_t size,
 			u16 x, u16 y, u16 w, u16 h);
+
+	int (*read_scl)(struct omap_dss_device *dssdev);
+	int (*get_scl_setting)(struct omap_dss_device *dssdev);
+	bool (*sw_te_sup)(struct omap_dss_device *dssdev);
+	bool (*deep_sleep_mode) (struct omap_dss_device *dssdev);
 };
 
 int omap_dss_register_driver(struct omap_dss_driver *);
@@ -607,6 +629,7 @@ int omap_dispc_unregister_isr(omap_dispc_isr_t isr, void *arg, u32 mask);
 int omap_dispc_wait_for_irq_timeout(u32 irqmask, unsigned long timeout);
 int omap_dispc_wait_for_irq_interruptible_timeout(u32 irqmask,
 		unsigned long timeout);
+void dispc_enable_spatial_dithering(bool enable);
 
 #define to_dss_driver(x) container_of((x), struct omap_dss_driver, driver)
 #define to_dss_device(x) container_of((x), struct omap_dss_device, dev)
