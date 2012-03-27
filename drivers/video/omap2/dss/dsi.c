@@ -565,10 +565,7 @@ void dsi_irq_handler(void)
 		spin_lock(&dsi.errors_lock);
 		dsi.errors |= irqstatus & DSI_IRQ_ERROR_MASK;
 		spin_unlock(&dsi.errors_lock);
-		if (irqstatus & DSI_IRQ_TA_TIMEOUT)
-		{
-			schedule_error_recovery();
-		}
+		schedule_error_recovery();
 	} else if (debug_irq) {
 		print_irq_status(irqstatus);
 	}
@@ -598,11 +595,7 @@ void dsi_irq_handler(void)
 		if (vcstatus & DSI_VC_IRQ_ERROR_MASK) {
 			DSSERR("DSI VC(%d) error, vc irqstatus %x\n",
 				       i, vcstatus);
-			if (vcstatus & DSI_VC_IRQ_BTA)
-			{
-				schedule_error_recovery();
-			}
-
+			schedule_error_recovery();
 			print_irq_status_vc(i, vcstatus);
 		} else if (debug_irq) {
 			print_irq_status_vc(i, vcstatus);
@@ -1926,19 +1919,19 @@ static u16 dsi_vc_flush_receive_data(int channel)
 		u32 val;
 		u8 dt;
 		val = dsi_read_reg(DSI_VC_SHORT_PACKET_HEADER(channel));
-		DSSDBG("\trawval %#08x\n", val);
+		DSSERR("\trawval %#08x\n", val);
 		dt = FLD_GET(val, 5, 0);
 		if (dt == DSI_DT_RX_ACK_WITH_ERR) {
 			u16 err = FLD_GET(val, 23, 8);
 			dsi_show_rx_ack_with_err(err);
 		} else if (dt == DSI_DT_RX_SHORT_READ_1) {
-			DSSDBG("\tDCS short response, 1 byte: %#x\n",
+			DSSERR("\tDCS short response, 1 byte: %#x\n",
 					FLD_GET(val, 23, 8));
 		} else if (dt == DSI_DT_RX_SHORT_READ_2) {
-			DSSDBG("\tDCS short response, 2 byte: %#x\n",
+			DSSERR("\tDCS short response, 2 byte: %#x\n",
 					FLD_GET(val, 23, 8));
 		} else if (dt == DSI_DT_RX_DCS_LONG_READ) {
-			DSSDBG("\tDCS long response, len %d\n",
+			DSSERR("\tDCS long response, len %d\n",
 					FLD_GET(val, 23, 8));
 			dsi_vc_flush_long_data(channel);
 		} else {
@@ -2228,10 +2221,24 @@ int dsi_vc_dcs_write(int channel, u8 *data, int len)
 
 	r = dsi_vc_dcs_write_nosync(channel, data, len);
 	if (r)
-		return r;
+		goto err;
 
 	r = dsi_vc_send_bta_sync(channel);
+	if (r)
+		goto err;
+	
+	/* RX_FIFO_NOT_EMPTY */
+	if (REG_GET(DSI_VC_CTRL(channel), 20, 20)) {
+		DSSERR("rx fifo not empty after write, dumping data:\n");
+		dsi_vc_flush_receive_data(channel);
+		r = -EIO;
+		goto err;
+	}
 
+	return 0;
+err:
+	DSSERR("dsi_vc_dcs_write(ch %d, cmd 0x%02x, len %d) failed\n",
+			channel, data[0], len);
 	return r;
 }
 EXPORT_SYMBOL(dsi_vc_dcs_write);
