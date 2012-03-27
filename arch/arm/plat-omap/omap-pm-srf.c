@@ -185,15 +185,23 @@ const struct omap_opp *omap_pm_dsp_get_opp_table(void)
 	return dsp_opps;
 }
 
-void omap_pm_dsp_set_min_opp(u8 opp_id)
+void omap_pm_dsp_set_min_opp(struct device *dev, unsigned long f)
 {
-	if (opp_id == 0) {
+	u8 opp_id;
+
+	if (!dev) {
 		WARN_ON(1);
 		return;
-	}
+	};
 
-	pr_debug("OMAP PM: DSP requests minimum VDD1 OPP to be %d\n", opp_id);
+	pr_debug("OMAP PM: DSP requests minimum VDD1 opp, \
+			 dsp freq requested is %lu\n", f);
 
+	/* DSP uses KHz clock. */
+	f *= 1000;
+
+	/* Get opp id to set VDD1 constraint*/
+	opp_id = get_opp(dsp_opps + MAX_VDD1_OPP, f);
 	/*
 	 * For now pass a dummy_dev struct for SRF to identify the caller.
 	 * Maybe its good to have DSP pass this as an argument

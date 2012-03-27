@@ -30,6 +30,8 @@
 #include <hw_defs.h>
 #include <hw_mbox.h>
 
+#include <linux/jiffies.h>
+
 /* width in bits of MBOX Id */
 #define HW_MBOX_ID_WIDTH	   2
 
@@ -43,6 +45,26 @@ struct MAILBOX_CONTEXT mboxsetting = {
 
 HW_STATUS HW_MBOX_initSettings(void __iomem *baseAddress)
 {
+	u32 status;
+	unsigned long timeout;
+
+	MLBMAILBOX_SYSCONFIGWriteRegister32(baseAddress, 0x2);
+	timeout = jiffies + msecs_to_jiffies(20);
+
+	do {
+		status = MLBMAILBOX_SYSSTATUSResetDoneRead32(baseAddress);
+		if (status)
+			break ;
+	} while (!time_after(jiffies, timeout));
+
+	if (!status) {
+		/* This error can only happen by HW failure.
+		   SW cannot handle or recover this error.
+		   Simply print error message in the kernel log. */
+		pr_err("cann't take mailbox out of reset\n");
+		return RET_FAIL;
+	}
+
 	MLBMAILBOX_SYSCONFIGWriteRegister32(baseAddress, SMARTIDLE | AUTOIDLE);
 	return RET_OK;
 }

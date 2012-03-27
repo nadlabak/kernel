@@ -91,6 +91,12 @@ struct dispsw_device {
 
 	int num_ovls;
 
+	/*
+	 * Performance hack to turn off GFX plane for playback
+	 * played to an overridden device
+	 */
+	int videoOverrideEnabled;
+
 	/* Data, per overlay, for overriding the overlay set info call */
 	struct dispsw_osi osi[MAX_OVERLAYS];
 
@@ -101,8 +107,61 @@ struct dispsw_device {
 
 static struct dispsw_device *g_dev;
 
+/* A couple of prototypes */
+static void dispsw_override_ovl(struct dispsw_osi *osi,
+				struct omap_overlay_info *info);
 
 /*=== Local Functions ==================================================*/
+
+/*
+ *  This function contains all of the code related to a performance hack where,
+ *  for HDMI, we believe the GFX plane is fully transparent most of the time,
+ *  thus does not need to be part of the hardware composition.  If we turn off
+ *  the GFX plane, we save a lot of L3 bus traffic since we don't need to read
+ *  the entire GFX plane 60 times per second for display controller HW
+ *  composition.
+ */
+static void dispsw_handle_gfx_disable(int ovl_id,
+					struct omap_overlay_info *info)
+{
+	struct dispsw_osi *osi = NULL;
+	struct omap_overlay_info gfx_info;
+	int gfx = 0;
+	int prev;
+	int i;
+
+	/* If the GFX plane changed, just chk if it should be enabled */
+	if (ovl_id == OMAP_DSS_GFX) {
+		info->enabled = (g_dev->videoOverrideEnabled) ? false : true;
+	} else {
+		prev = g_dev->videoOverrideEnabled;
+		g_dev->videoOverrideEnabled = 0;
+		for (i = 0; i < MAX_OVERLAYS; i++) {
+			osi = &g_dev->osi[i];
+			if (osi->ovl == NULL)
+				continue;
+			/* Save the GFX plane idx for below*/
+			else if (osi->id == OMAP_DSS_GFX)
+				gfx = i;
+			/*
+			 *  For non-GFX planes, if they are enabled,
+			 *  overriden (meaning HDMI), disable the GFX plane.
+			 */
+			else if (osi->last_info.enabled == true	&&
+								osi->override)
+				g_dev->videoOverrideEnabled = 1;
+		}
+		if (g_dev->videoOverrideEnabled != prev) {
+			osi = &g_dev->osi[gfx];
+			memcpy(&gfx_info, &osi->last_info, sizeof(gfx_info));
+			if (gfx_info.enabled && osi->override)
+				dispsw_override_ovl(osi, &gfx_info);
+			if (gfx_info.enabled && g_dev->videoOverrideEnabled)
+				gfx_info.enabled = false;
+			osi->set_func(osi->ovl, &gfx_info);
+		}
+	}
+}
 
 static int dispsw_convert_to_dss_rotation(enum dispsw_rotate rotate)
 {
@@ -480,6 +539,8 @@ static int dispsw_ovl_set_info(struct omap_overlay *ovl,
 		if (info->enabled && osi->override)
 			dispsw_override_ovl(osi, info);
 
+		dispsw_handle_gfx_disable(osi->id, info);
+
 		rc = osi->set_func(ovl, info);
 	}
 
@@ -714,6 +775,10 @@ static void dispsw_unset_display(struct omap_dss_device *dssdev,
 	int rc;
 
 	DBG("Disconnecting %s from %s\n", dssdev->name, dssmgr->name);
+
+	rc = dssdev->wait_vsync(dssdev);
+	if (rc != 0)
+		DBG("Wait VSync Failed - ignoring\n");
 
 	/* Ignore the errors as we are unsetting */
 	dssdev->disable(dssdev);
@@ -1083,6 +1148,8 @@ static int dispsw_open(struct inode *inode, struct file *file)
 	}
 
 	g_dev->opened = 1;
+
+	g_dev->videoOverrideEnabled = 0;
 
 failed:
 	mutex_unlock(&g_dev->mtx);

@@ -132,9 +132,13 @@ static s32 shm_size = 0x500000;	/* 5 MB */
 static u32 phys_mempool_base;
 static u32 phys_mempool_size;
 static int tc_wordswapon;	/* Default value is always false */
+#ifdef CONFIG_BRIDGE_RECOVERY
+static DECLARE_COMPLETION_ONSTACK(bridge_open_comp);
+static bool recover;
+#endif
 
 /* Minimum ACTIVE VDD1 OPP level for reliable DSP operation */
-unsigned short min_active_opp = 1;
+unsigned long min_active_opp_freq;
 
 #ifdef CONFIG_PM
 struct omap34xx_bridge_suspend_data {
@@ -184,8 +188,8 @@ MODULE_PARM_DESC(phys_mempool_size,
 module_param(tc_wordswapon, int, 0);
 MODULE_PARM_DESC(tc_wordswapon, "TC Word Swap Option. default = 0");
 
-module_param(min_active_opp, ushort, S_IRUSR | S_IWUSR);
-MODULE_PARM_DESC(min_active_opp, "Minimum ACTIVE VDD1 OPP Level, default = 1");
+module_param(min_active_opp_freq, ulong, S_IRUSR | S_IWUSR);
+MODULE_PARM_DESC(min_active_freq, "Min ACTIVE VDD1 OPPfreq, default = 260000");
 
 MODULE_AUTHOR("Texas Instruments");
 MODULE_LICENSE("GPL");
@@ -491,11 +495,22 @@ static int bridge_suspend(struct platform_device *pdev, pm_message_t state)
 
 static int bridge_resume(struct platform_device *pdev)
 {
-	u32 status;
+	u32 status = 0;
+	struct WMD_DEV_CONTEXT *dwContext;
 
-	status = PWR_WakeDSP(timeOut);
+	DEV_GetWMDContext(DEV_GetFirst(), &dwContext);
+	if (!dwContext)
+		return -EFAULT;
+
+	/*
+	 * only wake up the DSP if it was not in Hibernation before the
+	 * suspend transition
+	 */
+	if (dwContext->dwBrdState != BRD_DSP_HIBERNATION)
+		status = PWR_WakeDSP(timeOut);
+
 	if (DSP_FAILED(status))
-		return -1;
+		return status;
 
 	bridge_suspend_data.suspended = 0;
 	wake_up(&bridge_suspend_data.suspend_wq);
@@ -536,6 +551,106 @@ module_param_call(recovery, bridge_force_recovery, NULL, NULL, 0600);
 static LIST_HEAD(bridge_pctxt_list);
 static DEFINE_MUTEX(bridge_pctxt_list_lock);
 
+void bridge_prcm_registers_dump(void)
+{
+
+#define OMAP_GRP_SEL_BASE 0x48307000
+#define OMAP_MBX_BASE 0x48094000
+
+	u32 addr;
+	u32 prm_base = 0;
+	u32 cm_base = 0;
+	u32 grp_base = 0;
+	u32 mbx_base = 0;
+	u32 regVal ;
+
+	prm_base = OMAP_IVA2_PRM_BASE;
+	cm_base = OMAP_IVA2_CM_BASE;
+	grp_base = OMAP_GRP_SEL_BASE;
+	mbx_base = OMAP_MBX_BASE;
+
+	regVal = omap_readl(cm_base + 0x00);
+	printk(KERN_INFO "CM_FCLKEN_IVA2(0x%x) = 0x%x \n",
+				  (OMAP_IVA2_CM_BASE + 0x00), regVal);
+	regVal = omap_readl(cm_base + 0x04);
+	printk(KERN_INFO "CM_CLKEN_PLL_IVA2(0x%x) = 0x%x \n",
+				 (OMAP_IVA2_CM_BASE + 0x04), regVal);
+	regVal = omap_readl(cm_base + 0x10);
+	printk(KERN_INFO "CM_ICLKEN1_IVA2(0x%x) = 0x%x \n",
+				(OMAP_IVA2_CM_BASE + 0x10), regVal);
+	regVal = omap_readl(cm_base + 0x20);
+	printk(KERN_INFO "CM_IDLEST_IVA2(0x%x) = 0x%x \n",
+				(OMAP_IVA2_CM_BASE + 0x20), regVal);
+	regVal = omap_readl(cm_base + 0x24);
+	printk(KERN_INFO "CM_IDLEST_PLL_IVA2(0x%x) = 0x%x \n",
+				(OMAP_IVA2_CM_BASE + 0x24), regVal);
+	regVal = omap_readl(cm_base + 0x34);
+	printk(KERN_INFO "CM_AUTOIDLE_PLL_IVA2(0x%x) = 0x%x \n",
+				(OMAP_IVA2_CM_BASE + 0x34), regVal);
+	regVal = omap_readl(cm_base + 0x40);
+	printk(KERN_INFO "CM_CLKSEL1_PLL_IVA2(0x%x) = 0x%x \n",
+				(OMAP_IVA2_CM_BASE + 0x40), regVal);
+	regVal = omap_readl(cm_base + 0x48);
+	printk(KERN_INFO "CM_CLKSTCTRL_IVA2(0x%x) = 0x%x \n",
+				(OMAP_IVA2_CM_BASE + 0x48), regVal);
+	regVal = omap_readl(cm_base + 0x4c);
+	printk(KERN_INFO "CM_CLKSTST_IVA2(0x%x) = 0x%x \n",
+				(OMAP_IVA2_CM_BASE + 0x4c), regVal);
+	regVal = omap_readl(prm_base + 0x50);
+	printk(KERN_INFO "RM_RSTCTRL_IVA2(0x%x) = 0x%x \n",
+				(OMAP_IVA2_PRM_BASE + 0x50), regVal);
+	regVal = omap_readl(prm_base + 0x58);
+	printk(KERN_INFO "RM_RSTST_IVA2(0x%x) = 0x%x \n",
+				(OMAP_IVA2_PRM_BASE + 0x58), regVal);
+	regVal = omap_readl(prm_base + 0xe0);
+	printk(KERN_INFO "PM_PWSTCTRL_IVA2(0x%x) = 0x%x \n",
+				(OMAP_IVA2_PRM_BASE + 0xe0), regVal);
+	regVal = omap_readl(prm_base + 0xe4);
+	printk(KERN_INFO "PM_PWSTST_IVA2(0x%x) = 0x%x \n",
+				(OMAP_IVA2_PRM_BASE + 0xe4), regVal);
+	regVal = omap_readl(cm_base + 0xA10);
+	printk(KERN_INFO "CM_ICLKEN1_CORE(0x%x) = 0x%x \n",
+				(OMAP_IVA2_PRM_BASE + 0xa10), regVal);
+	regVal = omap_readl(grp_base + 0xA4);
+	printk(KERN_INFO "PM_MPUGRPSEL_PER(0x%x) = 0x%x \n",
+				(OMAP_GRP_SEL_BASE + 0xa4), regVal);
+	regVal = omap_readl(grp_base + 0xA8);
+	printk(KERN_INFO "PM_IVA2GRPSEL_PER(0x%x) = 0x%x \n",
+				(OMAP_GRP_SEL_BASE + 0xa8), regVal);
+	regVal = omap_readl(prm_base + 0xf8);
+	printk(KERN_INFO "PRM_IRQSTATUS_IVA2(0x%x) = 0x%x \n",
+				(OMAP_IVA2_PRM_BASE + 0xf8), regVal);
+	printk(KERN_INFO "\n\n******* MBX DUMP ********************* \n");
+	regVal = omap_readl(mbx_base + 0x10);
+	printk(KERN_INFO "MAILBOX_SYSCONFIG(0x%x) = 0x%x \n",
+				  (OMAP_MBX_BASE + 0x10), regVal);
+	regVal = omap_readl(mbx_base + 0x80);
+	printk(KERN_INFO "MAILBOX_FIFOSTATUS_MPU(0x%x) = 0x%x \n",
+				  (OMAP_MBX_BASE + 0x80), regVal);
+	regVal = omap_readl(mbx_base + 0x84);
+	printk(KERN_INFO "MAILBOX_FIFOSTATUS_DSP(0x%x) = 0x%x \n",
+				  (OMAP_MBX_BASE + 0x84), regVal);
+	regVal = omap_readl(mbx_base + 0xC0);
+	printk(KERN_INFO "MAILBOX_MSGSTATUS_MPU(0x%x) = 0x%x \n",
+				  (OMAP_MBX_BASE + 0xC0), regVal);
+	regVal = omap_readl(mbx_base + 0xC4);
+	printk(KERN_INFO "MAILBOX_MSGSTATUS_DSP(0x%x) = 0x%x \n",
+				  (OMAP_MBX_BASE + 0xC4), regVal);
+	regVal = omap_readl(mbx_base + 0x100);
+	printk(KERN_INFO "MAILBOX_IRQSTATUS_MPU(0x%x) = 0x%x \n",
+				  (OMAP_MBX_BASE + 0x100), regVal);
+	regVal = omap_readl(mbx_base + 0x108);
+	printk(KERN_INFO "MAILBOX_IRQSTATUS_DSP(0x%x) = 0x%x \n",
+				  (OMAP_MBX_BASE + 0x108), regVal);
+	regVal = omap_readl(mbx_base + 0x104);
+	printk(KERN_INFO "MAILBOX_IRQENABLE_MPU(0x%x) = 0x%x \n",
+				  (OMAP_MBX_BASE + 0x104), regVal);
+	regVal = omap_readl(mbx_base + 0x10C);
+	printk(KERN_INFO "MAILBOX_IRQENABLE_DSP(0x%x) = 0x%x \n",
+				  (OMAP_MBX_BASE + 0x10C), regVal);
+
+}
+
 static void bridge_load_firmware(void)
 {
 	DSP_HPROCESSOR hProcessor = NULL;
@@ -572,6 +687,8 @@ static void bridge_load_firmware(void)
 
 	DRV_RemoveAllResources(&pctxt);
 	PROC_Detach(&pctxt);
+
+	bridge_prcm_registers_dump() ;
 }
 
 static bool bridge_all_closed(void)
@@ -599,7 +716,27 @@ static void bridge_kill_all_users(struct work_struct *work)
 		cpu_relax();
 	printk(KERN_INFO "dspbridge: all bridge users exited\n");
 
+	/*clear_loadref();*/
+
+	/*
+	reset the mbbox
+	*/
+	{
+		DSP_STATUS status = DSP_SOK;
+		struct CFG_HOSTRES hostRes;
+
+		status = CFG_GetHostResources(
+		(struct CFG_DEVNODE *)DRV_GetFirstDevExtension() , &hostRes);
+		if (DSP_SUCCEEDED(status)) {
+			printk(KERN_INFO "reset mbox\n") ;
+			HW_MBOX_initSettings(hostRes.dwMboxBase);
+		}
+	}
+
 	bridge_load_firmware();
+
+	recover = false;
+	complete_all(&bridge_open_comp);
 }
 
 DECLARE_WORK(bridge_recovery_work, bridge_kill_all_users);
@@ -610,6 +747,9 @@ void bridge_recovery_notify(u32 event)
 		return;
 	printk(KERN_INFO "dspbridge fatal error occured, attempting to "
 	       "recover\n");
+
+	INIT_COMPLETION(bridge_open_comp);
+	recover = true;
 
 	queue_work(bridge_recovery_workq, &bridge_recovery_work);
 }
@@ -651,6 +791,11 @@ static int bridge_open(struct inode *ip, struct file *filp)
 	struct PROCESS_CONTEXT *pPctxt = NULL;
 
 	GT_0trace(driverTrace, GT_ENTER, "-> driver_open\n");
+
+#ifdef CONFIG_BRIDGE_RECOVERY
+	if (recover)
+		wait_for_completion(&bridge_open_comp);
+#endif
 
 	pPctxt = MEM_Calloc(sizeof(struct PROCESS_CONTEXT), MEM_PAGED);
 
@@ -718,6 +863,13 @@ static long bridge_ioctl(struct file *filp, unsigned int code,
 	union Trapped_Args pBufIn;
 
 	DBC_Require(filp != NULL);
+#ifdef CONFIG_BRIDGE_RECOVERY
+	if (recover) {
+		status = -EBUSY;
+		goto err;
+	}
+#endif
+
 #ifdef CONFIG_PM
 	status = omap34xxbridge_suspend_lockout(&bridge_suspend_data, filp);
 	if (status != 0)
@@ -749,6 +901,7 @@ static long bridge_ioctl(struct file *filp, unsigned int code,
 
 	GT_0trace(driverTrace, GT_ENTER, " <- driver_ioctl\n");
 
+err:
 	return status;
 }
 /*

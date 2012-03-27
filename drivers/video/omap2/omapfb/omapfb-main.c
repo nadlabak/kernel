@@ -55,6 +55,7 @@ module_param_named(test, omapfb_test_pattern, bool, 0644);
 #endif
 
 static int omapfb_fb_init(struct omapfb2_device *fbdev, struct fb_info *fbi);
+static enum omap_color_mode fb_format_to_dss_mode(enum omapfb_color_format fmt);
 
 #ifdef DEBUG
 static void draw_pixel(struct fb_info *fbi, int x, int y, unsigned color)
@@ -1408,15 +1409,39 @@ static int omapfb_alloc_fbmem_display(struct fb_info *fbi, unsigned long size,
 		unsigned long paddr)
 {
 	struct omapfb_info *ofbi = FB2OFB(fbi);
+	struct omapfb2_device *fbdev = ofbi->fbdev;
 	struct omap_dss_device *display;
 	int bytespp;
+	int bpp;
 
 	display =  fb2display(fbi);
 
 	if (!display)
 		return 0;
 
-	switch (display->get_recommended_bpp(display)) {
+	bpp = display->get_recommended_bpp(display);
+
+	/* update the bpp if the platform data explicity requests a format */
+	if (fbdev->dev->platform_data) {
+		struct omapfb_platform_data *opd;
+		int id = ofbi->id;
+
+		opd = fbdev->dev->platform_data;
+		if (opd->mem_desc.region[id].format_used) {
+			enum omap_color_mode mode;
+			enum omapfb_color_format format;
+			struct fb_var_screeninfo var;
+
+			format = opd->mem_desc.region[id].format;
+			mode = fb_format_to_dss_mode(format);
+			if ((mode >= 0) &&
+				(dss_mode_to_fb_mode(mode, &var) >= 0)) {
+					bpp = var.bits_per_pixel;
+			}
+		}
+	}
+
+	switch (bpp) {
 	case 16:
 		bytespp = 2;
 		break;
@@ -1440,12 +1465,8 @@ static int omapfb_alloc_fbmem_display(struct fb_info *fbi, unsigned long size,
 			DBG("adjusting fb mem size for VRFB, %u -> %lu\n",
 					w * h * bytespp, size);
 		} else {
-#ifdef CONFIG_PVR_OMAP_DSS2
 		/* pvr drivers require double buffered fb */
 		size = w * h * bytespp * 2 + 8192;
-#else
-		size = w * h * bytespp;
-#endif
 		}
 	}
 
@@ -2224,15 +2245,31 @@ static int omapfb_probe(struct platform_device *pdev)
 
 		/* set the update mode */
 		if (def_display->caps & OMAP_DSS_DISPLAY_CAP_MANUAL_UPDATE) {
+			bool sw_te = false;
+			if (def_display->sw_te_sup)
+				sw_te = def_display->sw_te_sup(def_display);
+
+			if (sw_te == false) {
+				/* Workaround for TE disable on Sage.
+				 * will be removed by CR# IKSTABLETWOV-3732 */
+				if (def_display->panel.panel_id == 0x000a0003) {
+					if (def_display->enable_te)
+						def_display->enable_te(
+							def_display, 0);
+				} else {
+					if (def_display->enable_te)
+						def_display->enable_te(
+							def_display, 1);
+				}
+			} else {
+				if (def_display->enable_te)
+					def_display->enable_te(def_display, 0);
+			}
 #ifdef CONFIG_FB_OMAP2_FORCE_AUTO_UPDATE
-			if (def_display->enable_te)
-				def_display->enable_te(def_display, 1);
 			if (def_display->set_update_mode)
 				def_display->set_update_mode(def_display,
 						OMAP_DSS_UPDATE_AUTO);
 #else /* MANUAL_UPDATE */
-			if (def_display->enable_te)
-				def_display->enable_te(def_display, 0);
 			if (def_display->set_update_mode)
 				def_display->set_update_mode(def_display,
 						OMAP_DSS_UPDATE_MANUAL);

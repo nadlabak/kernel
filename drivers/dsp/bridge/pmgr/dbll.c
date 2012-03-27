@@ -1573,3 +1573,13 @@ static void release(struct Dynamic_Loader_Initialize *this)
 {
 }
 
+
+void clear_loadref_dbll(struct DBLL_LibraryObj *lib)
+{
+	lib = lib->next;
+	while (lib != NULL) {
+		printk(KERN_INFO "clear_loadref [%s]******\n", lib->fileName);
+		lib->loadRef = 0;
+		lib = lib->next;
+	}
+}

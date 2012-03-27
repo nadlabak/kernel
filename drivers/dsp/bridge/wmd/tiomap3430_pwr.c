@@ -72,7 +72,6 @@
 extern struct MAILBOX_CONTEXT mboxsetting;
 extern unsigned short enable_off_mode;
 
-extern unsigned short min_active_opp;
 /*
  *  ======== handle_constraints_set ========
  *  	Sets new DSP constraint
@@ -96,12 +95,15 @@ DSP_STATUS handle_constraints_set(struct WMD_DEV_CONTEXT *pDevContext,
 		 * When Smartreflex is ON, DSP requires at least OPP level 3
 		 * to operate reliably. So boost lower OPP levels to OPP3.
 		 */
-		if (pConstraintVal < min_active_opp) {
-			pr_debug("DSPBRIDGE: VDD1 OPP%x elevated to OPP%x\n",
-					pConstraintVal, min_active_opp);
-			(*pdata->dsp_set_min_opp)(min_active_opp);
+		if (pConstraintVal < min_active_opp_freq) {
+			pr_debug("DSPBRIDGE: VDD1 freq %lu elevated to %lu\n",
+					(unsigned long)pConstraintVal,
+					(unsigned long)min_active_opp_freq);
+			(*pdata->dsp_set_min_opp)(&omap_dspbridge_dev->dev,
+							 min_active_opp_freq);
 		} else
-			(*pdata->dsp_set_min_opp)(pConstraintVal);
+			(*pdata->dsp_set_min_opp)(&omap_dspbridge_dev->dev,
+							pConstraintVal);
 	}
 #endif /* #ifdef CONFIG_BRIDGE_DVFS */
 	return DSP_SOK;
@@ -181,7 +183,10 @@ DSP_STATUS handle_hibernation_fromDSP(struct WMD_DEV_CONTEXT *pDevContext)
 			 * mode
 			 */
 			if (pdata->dsp_set_min_opp)
-				(*pdata->dsp_set_min_opp)(VDD1_OPP1);
+				(*pdata->dsp_set_min_opp)(
+					&omap_dspbridge_dev->dev,
+					min_active_opp_freq);
+
 			status = DSP_SOK;
 #endif /* CONFIG_BRIDGE_DVFS */
 		} else {
@@ -308,7 +313,9 @@ DSP_STATUS SleepDSP(struct WMD_DEV_CONTEXT *pDevContext, IN u32 dwCmd,
 			 * Set the OPP to low level before moving to OFF mode
 			 */
 			if (pdata->dsp_set_min_opp)
-				(*pdata->dsp_set_min_opp)(VDD1_OPP1);
+				(*pdata->dsp_set_min_opp)(
+					&omap_dspbridge_dev->dev,
+					min_active_opp_freq);
 		}
 #endif /* CONFIG_BRIDGE_DVFS */
 	}
@@ -814,10 +821,11 @@ DSP_STATUS tiomap3430_bump_dsp_opp_level(void)
 		/*
 		 * Increase OPP before waking up the DSP.
 		 */
-		(*pdata->dsp_set_min_opp)(min_active_opp);
+		(*pdata->dsp_set_min_opp)(&omap_dspbridge_dev->dev,
+					min_active_opp_freq);
 		DBG_Trace(DBG_LEVEL7, "CHNLSM_InterruptDSP: Setting "
-			"the vdd1 constraint level to %d before "
-			"waking DSP \n", min_active_opp);
+			"the vdd1 constraint level to freq %lu before "
+			"waking DSP \n", (unsigned long)min_active_opp_freq);
 	}
 #endif
 	return DSP_SOK;

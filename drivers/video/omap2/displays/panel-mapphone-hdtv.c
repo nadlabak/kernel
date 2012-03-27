@@ -49,8 +49,10 @@ static int mapphone_hdtv_panel_enable(struct omap_dss_device *dssdev)
 
 	DBG("mapphone_hdtv_panel_enable\n");
 
-	/* Set min throughput to 1280 x 720 x 2bpp x 60fps x 3 L3 accesses */
-	omap_pm_set_min_bus_tput(&dssdev->dev, OCP_INITIATOR_AGENT, 331776);
+	/* Set min throughput to:
+	 * (1280 x 720 x 2bpp x 60fps x 3 L3 accesses) + (200M client overhead)
+	 */
+	omap_pm_set_min_bus_tput(&dssdev->dev, OCP_INITIATOR_AGENT, 531776);
 
 	if (dssdev->platform_enable)
 		ret = dssdev->platform_enable(dssdev);

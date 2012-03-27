@@ -1974,3 +1974,10 @@ static u32 findGcf(u32 a, u32 b)
 	return b;
 }
 
+void clear_loadref_ndlr(struct NLDR_OBJECT *pNldr)
+{
+	struct DBLL_LibraryObj *lib;
+
+	lib = pNldr->baseLib;
+	clear_loadref_dbll(lib);
+}

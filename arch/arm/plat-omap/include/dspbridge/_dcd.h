@@ -161,6 +161,8 @@
 	extern u32 PROCWRAP_Stop(union Trapped_Args *args, void *pr_ctxt);
 	extern u32 PROCWRAP_InvalidateMemory(union Trapped_Args *args,
 			void *pr_ctxt);
+	extern u32 MGRWRAP_Force_Recovery(union Trapped_Args *args,
+			void *pr_ctxt);
 
 /* NODE wrapper functions */
 	extern u32 NODEWRAP_Allocate(union Trapped_Args *args, void *pr_ctxt);

@@ -204,7 +204,7 @@ void *omap_panel_register(struct omap_panel_device *dev)
 
 	mutex_lock(&g_dev->mtx);
 
-	if (g_dev->cnt > OMAP_PANEL_MAX_PANELS) {
+	if (g_dev->cnt >= OMAP_PANEL_MAX_PANELS) {
 		printk(KERN_ERR "omap_panel_register - No Resource!\n");
 		return NULL;
 	}

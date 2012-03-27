@@ -159,7 +159,7 @@ static int curr_vdd1_opp;
 static int curr_vdd2_opp;
 static DEFINE_MUTEX(dvfs_mutex);
 
-static unsigned short get_opp(struct omap_opp *opp_freq_table,
+unsigned short get_opp(struct omap_opp *opp_freq_table,
 		unsigned long freq)
 {
 	struct omap_opp *prcm_config;

@@ -283,18 +283,18 @@ DSP_STATUS WMD_IO_Create(OUT struct IO_MGR **phIOMgr,
 		if (devType == DSP_UNIT) {
 			HW_MBOX_initSettings(hostRes.dwMboxBase);
 			/* Plug the channel ISR:. */
-                       if ((request_irq(INT_MAIL_MPU_IRQ, IO_ISR, 0,
-                               "DspBridge\tmailbox", (void *)pIOMgr)) == 0)
-                               status = DSP_SOK;
-                       else
-                               status = DSP_EFAIL;
+			if ((request_irq(INT_MAIL_MPU_IRQ, IO_ISR, IRQF_SHARED,
+							"DspBridge\tmailbox",
+							(void *)pIOMgr)) == 0)
+				status = DSP_SOK;
+			else
+				status = DSP_EFAIL;
 		}
-       if (DSP_SUCCEEDED(status))
-               DBG_Trace(DBG_LEVEL1, "ISR_IRQ Object 0x%x \n",
-                               pIOMgr);
-       else
-               status = CHNL_E_ISR;
-       } else
+		if (DSP_SUCCEEDED(status))
+			DBG_Trace(DBG_LEVEL1, "ISR_IRQ Object 0x%x \n", pIOMgr);
+		else
+			status = CHNL_E_ISR;
+	} else
 		status = CHNL_E_ISR;
 func_cont:
 	if (DSP_FAILED(status)) {
@@ -958,7 +958,7 @@ static void IO_DispatchPM(struct work_struct *work)
 					 "Hibernation command failed\n");
 			}
 		} else if (pArg[0] == MBX_PM_OPP_REQ) {
-			pArg[1] = pIOMgr->pSharedMem->oppRequest.rqstOppPt;
+			pArg[1] = pIOMgr->pSharedMem->oppRequest.rqstDspFreq;
 			DBG_Trace(DBG_LEVEL7, "IO_DispatchPM : Value of OPP "
 				 "value =0x%x \n", pArg[1]);
 			status = pIOMgr->pIntfFxns->pfnDevCntrl(pIOMgr->
@@ -1758,8 +1758,9 @@ DSP_STATUS IO_SHMsetting(IN struct IO_MGR *hIOMgr, IN enum SHM_DESCTYPE desc,
 			 IN void *pArgs)
 {
 #ifdef CONFIG_BRIDGE_DVFS
-	struct omap_opp *dsp_opp_table;
-	u32 i, val;
+	struct omap_opp *dsp_opp_table, *temp, *temp_save;
+	int i, j;
+	u32 val;
 	u8 vdd1_max_opps, dsp_max_opps = 0;
 	struct dspbridge_platform_data *pdata =
 				omap_dspbridge_dev->dev.platform_data;
@@ -1781,6 +1782,26 @@ DSP_STATUS IO_SHMsetting(IN struct IO_MGR *hIOMgr, IN enum SHM_DESCTYPE desc,
 
 		vdd1_max_opps = omap_pm_get_max_vdd1_opp();
 		dsp_opp_table = (*pdata->dsp_get_rate_table)();
+		temp = kzalloc(sizeof(struct omap_opp) * vdd1_max_opps ,
+								GFP_KERNEL);
+		if (!temp) {
+			pr_err("IO_SHMSetting:memory allocation failed\n");
+			return -ENOMEM;
+		}
+		temp_save = temp;
+
+		for (i = 1; i <= vdd1_max_opps; i++) {
+			*temp = dsp_opp_table[i];
+			for (j = i - 1; j  >= 0 &&  dsp_opp_table[j].rate >
+						(*temp).rate; j--) {
+				dsp_opp_table[j+1] = dsp_opp_table[j];
+				}
+			dsp_opp_table[j+1] = *temp;
+			temp++;
+		}
+		kfree(temp_save);
+
+		min_active_opp_freq = dsp_opp_table[MIN_VDD1_OPP].rate/1000;
 
 		for (i = 0; i <= vdd1_max_opps; i++) {
 			hIOMgr->pSharedMem->oppTableStruct.oppPoint[i].voltage =
@@ -1816,8 +1837,11 @@ DSP_STATUS IO_SHMsetting(IN struct IO_MGR *hIOMgr, IN enum SHM_DESCTYPE desc,
 
 			hIOMgr->pSharedMem->oppTableStruct.oppPoint[i].
 				maxFreq = val / 1000;
-			DBG_Trace(DBG_LEVEL5, "OPP shared memory -max value: "
+			DBG_Trace(DBG_LEVEL5,
+				 "OPP shared memory min value %d-max value: "
 				 "%d\n", hIOMgr->pSharedMem->oppTableStruct.
+				  oppPoint[i].minFreq,
+				 hIOMgr->pSharedMem->oppTableStruct.
 				 oppPoint[i].maxFreq);
 			if (!dsp_max_opps && dsp_opp_table[i].rate ==
 					dsp_opp_table[vdd1_max_opps].rate)
@@ -1836,7 +1860,7 @@ DSP_STATUS IO_SHMsetting(IN struct IO_MGR *hIOMgr, IN enum SHM_DESCTYPE desc,
 		break;
 	case SHM_GETOPP:
 		/* Get the OPP that DSP has requested */
-		*(u32 *)pArgs = hIOMgr->pSharedMem->oppRequest.rqstOppPt;
+		*(u32 *)pArgs = hIOMgr->pSharedMem->oppRequest.rqstDspFreq;
 		break;
 	default:
 		break;
