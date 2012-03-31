@@ -80,7 +80,9 @@ PVRSRV_ERROR OSReservePhys(IMG_CPU_PHYADDR BasePAddr, IMG_SIZE_T ui32Bytes, IMG_
 PVRSRV_ERROR OSUnReservePhys(IMG_VOID *pvCpuVAddr, IMG_SIZE_T ui32Bytes, IMG_UINT32 ui32Flags, IMG_HANDLE hOSMemHandle);
 
 #if defined(SUPPORT_CPU_CACHED_BUFFERS)
-IMG_VOID OSFlushCPUCache(IMG_VOID);
+IMG_VOID OSFlushCPUCacheKM(IMG_VOID);
+IMG_VOID OSFlushCPUCacheRangeKM(IMG_VOID *pvRangeAddrStart,
+						 	IMG_VOID *pvRangeAddrEnd);
 #endif
 
 #if defined(__linux__)

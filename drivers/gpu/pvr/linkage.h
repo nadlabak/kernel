@@ -33,7 +33,7 @@ IMG_INT32 PVRSRV_BridgeDispatchKM(struct file *file, IMG_UINT cmd, IMG_UINT32 ar
 
 IMG_VOID PVRDPFInit(IMG_VOID);
 
-#ifdef DEBUG
+#ifdef DEBUG_PVR
 IMG_INT PVRDebugProcSetLevel(struct file *file, const IMG_CHAR *buffer, IMG_UINT32 count, IMG_VOID *data);
 IMG_VOID PVRDebugSetLevel(IMG_UINT32 uDebugLevel);
 

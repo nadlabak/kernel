@@ -219,7 +219,7 @@ OSAllocPages_Impl(IMG_UINT32 ui32AllocFlags,
     
     if(ui32AllocFlags & (PVRSRV_HAP_WRITECOMBINE | PVRSRV_HAP_UNCACHED))
     {
-        OSFlushCPUCache();
+        OSFlushCPUCacheKM();
     }
 #endif 
 
@@ -1370,6 +1370,7 @@ IMG_UINT32 OSReadHWReg(IMG_PVOID pvLinRegBaseAddr, IMG_UINT32 ui32Offset)
 #if !defined(NO_HARDWARE)
     return (IMG_UINT32) readl((IMG_PBYTE)pvLinRegBaseAddr+ui32Offset);
 #else
+    printk (" pvLinRegBaseAddr: %x,   ui32Offset: %d \n", pvLinRegBaseAddr, ui32Offset);
     return *(IMG_UINT32 *)((IMG_PBYTE)pvLinRegBaseAddr+ui32Offset);
 #endif
 }
@@ -1699,7 +1700,7 @@ typedef struct TIMER_CALLBACK_DATA_TAG
     struct timer_list	sTimer;
     IMG_UINT32		ui32Delay;
     IMG_BOOL		bActive;
-	struct work_struct work;
+    struct 		work_struct work;
 }TIMER_CALLBACK_DATA;
 
 static TIMER_CALLBACK_DATA sTimers[OS_MAX_TIMERS];
@@ -1724,7 +1725,8 @@ static void timer_worker(struct work_struct *work)
 static IMG_VOID OSTimerCallbackWrapper(IMG_UINT32 ui32Data)
 {
     TIMER_CALLBACK_DATA	*psTimerCBData = (TIMER_CALLBACK_DATA*)ui32Data;
-	schedule_work(&psTimerCBData->work);
+
+    schedule_work(&psTimerCBData->work);    
 }
 
 
@@ -1764,9 +1766,8 @@ IMG_HANDLE OSAddTimer(PFN_TIMER_FUNC pfnTimerFunc, IMG_VOID *pvData, IMG_UINT32 
     psTimerCBData->pvData = pvData;
     psTimerCBData->bActive = IMG_FALSE;
     
+    
     INIT_WORK(&psTimerCBData->work, timer_worker);
-
-
 
     psTimerCBData->ui32Delay = ((HZ * ui32MsTimeout) < 1000)
                                 ?	1
@@ -1809,7 +1810,7 @@ PVRSRV_ERROR OSRemoveTimer (IMG_HANDLE hTimer)
 PVRSRV_ERROR OSEnableTimer (IMG_HANDLE hTimer)
 {
     TIMER_CALLBACK_DATA *psTimerCBData = GetTimerStructure(hTimer);
-	int ret;
+    int ret;
 
     PVR_ASSERT(psTimerCBData->bInUse);
     PVR_ASSERT(!psTimerCBData->bActive);
@@ -1820,10 +1821,10 @@ PVRSRV_ERROR OSEnableTimer (IMG_HANDLE hTimer)
     
     psTimerCBData->sTimer.expires = psTimerCBData->ui32Delay + jiffies;
 
-    
     ret = mod_timer(&psTimerCBData->sTimer, psTimerCBData->ui32Delay + jiffies);
-	if(ret == 1)
-		PVR_DPF((PVR_DBG_WARNING, "OSEnableTimer: enabling active timer"));
+    
+    if(ret == 1)
+	PVR_DPF((PVR_DBG_WARNING, "OSEnableTimer: enabling active timer")); 
 
     return PVRSRV_OK;
 }
@@ -1839,8 +1840,8 @@ PVRSRV_ERROR OSDisableTimer (IMG_HANDLE hTimer)
     
     psTimerCBData->bActive = IMG_FALSE;
 
-
     cancel_work_sync(&psTimerCBData->work);
+    
     del_timer_sync(&psTimerCBData->sTimer);	
     
     return PVRSRV_OK;
@@ -2053,7 +2054,7 @@ typedef struct _sWrapMemInfo_
     IMG_SYS_PHYADDR *psPhysAddr;
     IMG_INT iPageOffset;
     IMG_INT iContiguous;
-#if defined(DEBUG)
+#if defined(DEBUG_PVR)
     IMG_UINT32 ulStartAddr;
     IMG_UINT32 ulBeyondEndAddr;
     struct vm_area_struct *psVMArea;
@@ -2218,7 +2219,7 @@ PVRSRV_ERROR OSAcquirePhysPageAddr(IMG_VOID* pvCPUVAddr,
     }
     memset(psInfo, 0, sizeof(*psInfo));
 
-#if defined(DEBUG)
+#if defined(DEBUG_PVR)
     psInfo->ulStartAddr = ulStartAddrOrig;
     psInfo->ulBeyondEndAddr = ulBeyondEndAddrOrig;
 #endif
@@ -2294,7 +2295,7 @@ PVRSRV_ERROR OSAcquirePhysPageAddr(IMG_VOID* pvCPUVAddr,
         
         goto error_release_mmap_sem;
     }
-#if defined(DEBUG)
+#if defined(DEBUG_PVR)
     psInfo->psVMArea = psVMArea;
 #endif
 
@@ -2428,6 +2429,8 @@ error_free:
     return PVRSRV_ERROR_GENERIC;
 }
 
+
+
 #if defined(SUPPORT_CPU_CACHED_BUFFERS)
 
 #if defined(__i386__)
@@ -2438,7 +2441,8 @@ static void per_cpu_cache_flush(void *arg)
 }
 #endif 
 
-IMG_VOID OSFlushCPUCache(IMG_VOID)
+
+IMG_VOID OSFlushCPUCacheKM()
 {
 #if defined(__arm__)
     flush_cache_all();
@@ -2450,4 +2454,25 @@ IMG_VOID OSFlushCPUCache(IMG_VOID)
 #endif
 }
 
+
+IMG_VOID OSFlushCPUCacheRangeKM(IMG_VOID *pvRangeAddrStart,
+						 IMG_VOID *pvRangeAddrEnd)
+{
+	PVR_UNREFERENCED_PARAMETER(pvRangeAddrStart);
+	PVR_UNREFERENCED_PARAMETER(pvRangeAddrEnd);
+
+	
+	
+#if defined(__arm__)
+    flush_cache_all();
+#elif defined(__i386__)
+    
+    on_each_cpu(per_cpu_cache_flush, NULL, 1);
+#else
+#error "Implement full CPU cache flush for this CPU!"
+#endif
+}
+
+
 #endif 
+

@@ -232,7 +232,7 @@ static PVRSRV_ERROR SGXCleanupSharedPBDescCallback(IMG_PVOID pvParam, IMG_UINT32
 
 static PVRSRV_ERROR SGXCleanupSharedPBDescCreateLockCallback(IMG_PVOID pvParam, IMG_UINT32 ui32Param)
 {
-#ifdef DEBUG
+#ifdef DEBUG_PVR
 	PVRSRV_PER_PROCESS_DATA *psPerProc = (PVRSRV_PER_PROCESS_DATA *)pvParam;
 	PVR_ASSERT(psPerProc == psPerProcCreateSharedPB);
 #else

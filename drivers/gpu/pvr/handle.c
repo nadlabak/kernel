@@ -30,7 +30,7 @@
 #include "services_headers.h"
 #include "handle.h"
 
-#ifdef	DEBUG
+#ifdef	DEBUG_PVR
 #define	HANDLE_BLOCK_SIZE	1
 #else
 #define	HANDLE_BLOCK_SIZE	256
@@ -223,7 +223,7 @@ IMG_BOOL HandleListIsEmpty(IMG_UINT32 ui32Index, struct sHandleList *psList)
 
 	bIsEmpty = (IMG_BOOL)(psList->ui32Next == ui32Index);
 
-#ifdef	DEBUG
+#ifdef	DEBUG_PVR
 	{
 		IMG_BOOL bIsEmpty2;
 
@@ -235,7 +235,7 @@ IMG_BOOL HandleListIsEmpty(IMG_UINT32 ui32Index, struct sHandleList *psList)
 	return bIsEmpty;
 }
 
-#ifdef DEBUG
+#ifdef DEBUG_PVR
 #ifdef INLINE_IS_PRAGMA
 #pragma inline(NoChildren)
 #endif
@@ -504,6 +504,7 @@ static PVRSRV_ERROR FreeHandle(PVRSRV_HANDLE_BASE *psBase, struct sHandle *psHan
 
 	if (BATCHED_HANDLE(psHandle) && !BATCHED_HANDLE_PARTIALLY_FREE(psHandle))
 	{
+		 
 		SET_BATCHED_HANDLE_PARTIALLY_FREE(psHandle);
 		
 		return PVRSRV_OK;
@@ -900,12 +901,12 @@ static PVRSRV_ERROR AllocHandle(PVRSRV_HANDLE_BASE *psBase, IMG_HANDLE *phHandle
 	psNewHandle->ui32Index = ui32NewIndex;
 
 	InitParentList(psBase, psNewHandle);
-#if defined(DEBUG)
+#if defined(DEBUG_PVR)
 	PVR_ASSERT(NoChildren(psBase, psNewHandle));
 #endif
 
 	InitChildEntry(psBase, psNewHandle);
-#if defined(DEBUG)
+#if defined(DEBUG_PVR)
 	PVR_ASSERT(NoParent(psBase, psNewHandle));
 #endif
 
@@ -916,6 +917,7 @@ static PVRSRV_ERROR AllocHandle(PVRSRV_HANDLE_BASE *psBase, IMG_HANDLE *phHandle
 
 		psBase->ui32FirstBatchIndexPlusOne = ui32NewIndex + 1;
 
+		 
 		SET_BATCHED_HANDLE(psNewHandle);
 	}
 	else
@@ -1303,7 +1305,7 @@ static PVRSRV_ERROR PVRSRVHandleBatchCommitOrRelease(PVRSRV_HANDLE_BASE *psBase,
 		ui32IndexPlusOne = ui32NextIndexPlusOne;
 	}
 
-#ifdef DEBUG
+#ifdef DEBUG_PVR
 	if (psBase->ui32TotalHandCountPreBatch != psBase->ui32TotalHandCount)
 	{
 		IMG_UINT32 ui32Delta = psBase->ui32TotalHandCount - psBase->ui32TotalHandCountPreBatch;

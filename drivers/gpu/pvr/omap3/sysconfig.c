@@ -56,7 +56,7 @@ IMG_UINT32 PVRSRV_BridgeDispatchKM(IMG_UINT32	Ioctl,
 								   IMG_UINT32	OutBufLen,
 								   IMG_UINT32	*pdwBytesTransferred);
 
-#if defined(DEBUG) && defined(DUMP_OMAP34xx_CLOCKS) && defined(__linux__)
+#if defined(DEBUG_PVR) && defined(DUMP_OMAP34xx_CLOCKS) && defined(__linux__)
 
 #pragma GCC diagnostic ignored "-Wstrict-prototypes"
 #include <mach/clock.h>
@@ -337,22 +337,7 @@ PVRSRV_ERROR SysInitialise(IMG_VOID)
 #if !defined(SGX_DYNAMIC_TIMING_INFO)
 	
 	psTimingInfo = &gsSGXDeviceMap.sTimingInfo;
-	if (cpu_is_omap3430()) {
-		psTimingInfo->ui32CoreClockSpeed = \
-		SYS_SGX_CLOCK_SPEED_3430;
-	} else {
-		if (cpu_is_omap3630()) {
-			psTimingInfo->ui32CoreClockSpeed = \
-			SYS_SGX_CLOCK_SPEED_3630;
-		} else {
-			PVR_DPF((PVR_DBG_ERROR, "SysInitialise: \
-			Invalid OMAP Chip ID"));
-			(IMG_VOID)SysDeinitialise(gpsSysData);
-			gpsSysData = IMG_NULL;
-			return PVRSRV_ERROR_INVALID_DEVICE;
-		}
-	}
-
+	psTimingInfo->ui32CoreClockSpeed = SYS_SGX_CLOCK_SPEED;
 	psTimingInfo->ui32HWRecoveryFreq = SYS_SGX_HWRECOVERY_TIMEOUT_FREQ; 
 #if defined(SUPPORT_ACTIVE_POWER_MANAGEMENT)
 	psTimingInfo->bEnableActivePM = IMG_TRUE;

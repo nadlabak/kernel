@@ -141,7 +141,7 @@ struct _RA_ARENA_
 	RA_STATISTICS sStatistics;
 #endif
 
-#if defined(CONFIG_PROC_FS) && defined(DEBUG)
+#if defined(CONFIG_PROC_FS) && defined(DEBUG_PVR)
 #define PROC_NAME_SIZE		32
 
 #ifdef PVR_PROC_USE_SEQ_FILE
@@ -159,7 +159,7 @@ struct _RA_ARENA_
 IMG_VOID RA_Dump (RA_ARENA *pArena);
 #endif
 
-#if defined(CONFIG_PROC_FS) && defined(DEBUG)
+#if defined(CONFIG_PROC_FS) && defined(DEBUG_PVR)
 
 #ifdef PVR_PROC_USE_SEQ_FILE
 
@@ -182,7 +182,7 @@ RA_DumpInfo(IMG_CHAR *page, IMG_CHAR **start, off_t off, IMG_INT count, IMG_INT 
 IMG_VOID CheckBMFreespace(IMG_VOID);
 #endif
 
-#if defined(CONFIG_PROC_FS) && defined(DEBUG)
+#if defined(CONFIG_PROC_FS) && defined(DEBUG_PVR)
 static IMG_CHAR *ReplaceSpaces(IMG_CHAR * const pS)
 {
 	IMG_CHAR *pT;
@@ -907,7 +907,7 @@ RA_Create (IMG_CHAR *name,
 	pArena->sStatistics.uExportCount = 0;
 #endif
 
-#if defined(CONFIG_PROC_FS) && defined(DEBUG)
+#if defined(CONFIG_PROC_FS) && defined(DEBUG_PVR)
 	if(strcmp(pArena->name,"") != 0)
 	{
 
@@ -1052,7 +1052,7 @@ RA_Delete (RA_ARENA *pArena)
 		pArena->sStatistics.uSpanCount--;
 #endif
 	}
-#if defined(CONFIG_PROC_FS) && defined(DEBUG)
+#if defined(CONFIG_PROC_FS) && defined(DEBUG_PVR)
 	{
 
 #ifdef PVR_PROC_USE_SEQ_FILE
@@ -1537,7 +1537,7 @@ IMG_VOID CheckBMFreespace(IMG_VOID)
 #endif
 
 
-#if (defined(CONFIG_PROC_FS) && defined(DEBUG)) || defined (RA_STATS)
+#if (defined(CONFIG_PROC_FS) && defined(DEBUG_PVR)) || defined (RA_STATS)
 static IMG_CHAR *
 _BTType (IMG_INT eType)
 {
@@ -1583,7 +1583,7 @@ RA_Dump (RA_ARENA *pArena)
 #endif 
 
 
-#if defined(CONFIG_PROC_FS) && defined(DEBUG)
+#if defined(CONFIG_PROC_FS) && defined(DEBUG_PVR)
 
 
 #ifdef PVR_PROC_USE_SEQ_FILE

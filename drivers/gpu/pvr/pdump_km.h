@@ -139,6 +139,8 @@ extern "C" {
 										   IMG_UINT32 ui32Size,
 										   IMG_UINT32 ui32PDumpFlags);
 
+	IMG_BOOL PDumpIsSuspended(IMG_VOID);
+
 #if defined(SGX_SUPPORT_COMMON_PDUMP) || !defined(SUPPORT_VGX)
 	
 	PVRSRV_ERROR PDumpRegKM(IMG_UINT32		dwReg,
