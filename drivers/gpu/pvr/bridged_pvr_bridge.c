@@ -2693,7 +2693,7 @@ DummyBW(IMG_UINT32 ui32BridgeID,
 		IMG_VOID *psBridgeOut,
 		PVRSRV_PER_PROCESS_DATA *psPerProc)
 {
-#if !defined(DEBUG_PVR)
+#if !defined(DEBUG)
 	PVR_UNREFERENCED_PARAMETER(ui32BridgeID);
 #endif
 	PVR_UNREFERENCED_PARAMETER(psBridgeIn);
@@ -2720,7 +2720,7 @@ _SetDispatchTableEntry(IMG_UINT32 ui32Index,
 					   const IMG_CHAR *pszFunctionName)
 {
 	static IMG_UINT32 ui32PrevIndex = ~0UL;		
-#if !defined(DEBUG_PVR)
+#if !defined(DEBUG)
 	PVR_UNREFERENCED_PARAMETER(pszIOCName);
 #endif
 #if !defined(DEBUG_BRIDGE_KM_DISPATCH_TABLE) && !defined(DEBUG_BRIDGE_KM)
@@ -2827,9 +2827,7 @@ PVRSRVInitSrvDisconnectBW(IMG_UINT32 ui32BridgeID,
 
 	psRetOUT->eError = PVRSRVFinaliseSystem(psInitSrvDisconnectIN->bInitSuccesful);
 
-	PVRSRVSetInitServerState( PVRSRV_INIT_SERVER_SUCCESSFUL,
-				(((psRetOUT->eError == PVRSRV_OK) && (psInitSrvDisconnectIN->bInitSuccesful)))
-				? IMG_TRUE : IMG_FALSE);
+	PVRSRVSetInitServerState( PVRSRV_INIT_SERVER_SUCCESSFUL ,(IMG_BOOL)(((psRetOUT->eError == PVRSRV_OK) && (psInitSrvDisconnectIN->bInitSuccesful))));
 
 	return 0;
 }

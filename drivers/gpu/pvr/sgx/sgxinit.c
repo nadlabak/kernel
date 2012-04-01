@@ -26,8 +26,6 @@
 
 #include <stddef.h>
 
-#include <linux/delay.h>
-#include <linux/io.h>
 #include "sgxdefs.h"
 #include "sgxmmu.h"
 #include "services_headers.h"
@@ -56,29 +54,7 @@
 
 DECLARE_LIST_ANY_VA(PVRSRV_POWER_DEV);
 
-#define WR_MEM_32(addr, data)    *(unsigned int*)(addr) = data
-#define RD_MEM_32(addr) 	 *(unsigned int*)(addr)
-#define UWORD32 			     unsigned int
-#ifdef PLAT_TI81xx
-#define SGX_TI81xx_CLK_DVDR_ADDR 0x481803b0
-#define CLKCTRL 				0x4
-#define TENABLE 				0x8
-#define TENABLEDIV 				0xC
-#define M2NDIV  				0x10
-#define MN2DIV 				    0x14
-#define STATUS 				    0x24
-#define PLL_BASE_ADDRESS         0x481C5000 
-#define SGX_PLL_BASE            (PLL_BASE_ADDRESS+0x0B0)
-#define OSC_0			   		 20 
-#define SGX_DIVIDER_ADDR        0x481803B0
-// ADPLLJ_CLKCRTL_Register Value Configurations
-// ADPLLJ_CLKCRTL_Register SPEC bug  bit 19,bit29 -- CLKLDOEN,CLKDCOEN
-#define ADPLLJ_CLKCRTL_HS2       0x00000801 //HS2 Mode,TINTZ =1  --used by all PLL's except HDMI 
-#endif
-
-#if defined(SUPPORT_SGX_HWPERF)
 IMG_VOID* MatchPowerDeviceIndex_AnyVaCb(PVRSRV_POWER_DEV *psPowerDev, va_list va);
-#endif
 
 #define VAR(x) #x
 
@@ -280,52 +256,16 @@ static PVRSRV_ERROR SGXRunScript(PVRSRV_SGXDEV_INFO *psDevInfo, SGX_INIT_COMMAND
 	return PVRSRV_ERROR_GENERIC;
 }
 
-#ifdef PLAT_TI81xx
-//Function to configure PLL clocks. Only required for TI814x. For other devices its taken care in u-boot.
-void PLL_Clocks_Config(UWORD32 Base_Address,UWORD32 OSC_FREQ,UWORD32 N,UWORD32 M,UWORD32 M2,UWORD32 CLKCTRL_VAL)
-{
-        UWORD32 m2nval,mn2val,read_clkctrl;
-        m2nval = (M2<<16) | N;
-        mn2val =  M;
-	WR_MEM_32((Base_Address+M2NDIV    ),m2nval);
-	msleep(100); 
-	WR_MEM_32((Base_Address+MN2DIV    ),mn2val);  
-	msleep(100); 
-	WR_MEM_32((Base_Address+TENABLEDIV),0x1);
-	msleep(100); 
-	WR_MEM_32((Base_Address+TENABLEDIV),0x0);
-	msleep(100); 
-	WR_MEM_32((Base_Address+TENABLE   ),0x1);
-	msleep(100); 
-	WR_MEM_32((Base_Address+TENABLE   ),0x0);
-	msleep(100); 
-	read_clkctrl = RD_MEM_32(Base_Address+CLKCTRL);
-	//configure the TINITZ(bit0) and CLKDCO BITS IF REQUIRED  
-	WR_MEM_32(Base_Address+CLKCTRL,(read_clkctrl & 0xff7fe3ff) | CLKCTRL_VAL);
-	msleep(100); 
-	read_clkctrl = RD_MEM_32(Base_Address+CLKCTRL);
-
-	// poll for the freq,phase lock to occur
-	while (( (RD_MEM_32(Base_Address+STATUS)) & 0x00000600) != 0x00000600);
-	//wait fot the clocks to get stabized
-	msleep(10); 
-}
-
-#endif  
-
 PVRSRV_ERROR SGXInitialise(PVRSRV_SGXDEV_INFO	*psDevInfo)
 {
 	PVRSRV_ERROR			eError;
 	PVRSRV_KERNEL_MEM_INFO	*psSGXHostCtlMemInfo = psDevInfo->psKernelSGXHostCtlMemInfo;
 	SGXMKIF_HOST_CTL		*psSGXHostCtl = psSGXHostCtlMemInfo->pvLinAddrKM;
-#ifdef PLAT_TI81xx
-	void __iomem *pll_base;
-	void __iomem *div_base;
-#endif
 #if defined(PDUMP)
 	static IMG_BOOL			bFirstTime = IMG_TRUE;
 #endif 
 
+	
 
 	PDUMPCOMMENTWITHFLAGS(PDUMP_FLAGS_CONTINUOUS, "SGX initialisation script part 1\n");
 	eError = SGXRunScript(psDevInfo, psDevInfo->sScripts.asInitCommandsPart1, SGX_MAX_INIT_COMMANDS);
@@ -349,8 +289,7 @@ PVRSRV_ERROR SGXInitialise(PVRSRV_SGXDEV_INFO	*psDevInfo)
 	OSWriteHWReg(psDevInfo->pvRegsBaseKM, EUR_CR_POWER, 1);
 	PDUMPREG(EUR_CR_POWER, 1);
 #else
-       printk (" OSWriteHWReg: pvRegsBaseKM = %x", psDevInfo->pvRegsBaseKM);
-
+	
 	OSWriteHWReg(psDevInfo->pvRegsBaseKM, EUR_CR_POWER, 0);
 	PDUMPREG(EUR_CR_POWER, 0);
 #endif
@@ -380,27 +319,6 @@ PVRSRV_ERROR SGXInitialise(PVRSRV_SGXDEV_INFO	*psDevInfo)
 	}
 	PDUMPCOMMENTWITHFLAGS(PDUMP_FLAGS_CONTINUOUS, "End of SGX initialisation script part 2\n");
 
-#ifdef PLAT_TI81xx
-	OSWriteHWReg(psDevInfo->pvRegsBaseKM, 0xFF08, 0x80000000);//OCP Bypass mode
-        if(cpu_is_ti816x()) {
-          div_base = ioremap(SGX_TI81xx_CLK_DVDR_ADDR,0x100);
-          WR_MEM_32((div_base),0x2);
-          msleep(100);
-          iounmap (div_base);
-        } else {
-            div_base = ioremap(SGX_TI81xx_CLK_DVDR_ADDR,0x100);
-            WR_MEM_32((div_base),0x0);
-            pll_base = ioremap(SGX_PLL_BASE,0x100);
-	    PLL_Clocks_Config((int)pll_base,OSC_0,19,800,4,ADPLLJ_CLKCRTL_HS2);
-            iounmap (div_base);
-            iounmap (pll_base);
-        }
-
-#else
-//#if defined(SGX530) && (SGX_CORE_REV == 125)
-     if(cpu_is_omap3630())
-	OSWriteHWReg(psDevInfo->pvRegsBaseKM, 0xFF08, 0x80000000);
-#endif
 
 	psSGXHostCtl->ui32InitStatus = 0;
 #if defined(PDUMP)
@@ -1096,7 +1014,7 @@ IMG_VOID SGXOSTimer(IMG_VOID *pvData)
 #if defined(NO_HARDWARE)
 	bPoweredDown = IMG_TRUE;
 #else
-	bPoweredDown = SGXIsDevicePowered(psDeviceNode) ? IMG_FALSE : IMG_TRUE;
+	bPoweredDown = (IMG_BOOL)!SGXIsDevicePowered(psDeviceNode);
 #endif 
 
 	
@@ -1574,10 +1492,9 @@ PVRSRV_ERROR SGXDevInitCompatCheck(PVRSRV_DEVICE_NODE *psDeviceNode)
 
 	
 	IMG_BOOL	bCheckCoreRev;
-	const IMG_UINT32	aui32CoreRevExceptions[] =
-		{
+	const IMG_UINT32	aui32CoreRevExceptions[] = {
 			0x10100, 0x10101
-		};
+	};
 	const IMG_UINT32	ui32NumCoreExceptions = sizeof(aui32CoreRevExceptions) / (2*sizeof(IMG_UINT32));
 	IMG_UINT	i;
 #endif
@@ -1600,9 +1517,8 @@ PVRSRV_ERROR SGXDevInitCompatCheck(PVRSRV_DEVICE_NODE *psDeviceNode)
 		ui32BuildOptionsMismatch = ui32BuildOptions ^ psDevInfo->ui32ClientBuildOptions;
 		if ( (psDevInfo->ui32ClientBuildOptions & ui32BuildOptionsMismatch) != 0)
 		{
-			PVR_LOG(("(FAIL) SGXInit: Mismatch in client-side (0x%lx) and KM driver (0x%lx) build options; "
+			PVR_LOG(("(FAIL) SGXInit: Mismatch in client-side and KM driver build options; "
 				"extra options present in client-side driver: (0x%lx). Please check sgx_options.h",
-				psDevInfo->ui32ClientBuildOptions, ui32BuildOptionsMismatch,
 				psDevInfo->ui32ClientBuildOptions & ui32BuildOptionsMismatch ));
 		}
 
@@ -1938,6 +1854,7 @@ PVRSRV_ERROR SGXGetMiscInfoKM(PVRSRV_SGXDEV_INFO	*psDevInfo,
 		{
 			PVRSRV_ERROR eError;
 			PVRSRV_SGX_MISCINFO_FEATURES		*psSGXFeatures;
+			PPVRSRV_KERNEL_MEM_INFO	psMemInfo = psDevInfo->psKernelSGXMiscMemInfo;
 
 			eError = SGXGetMiscInfoUkernel(psDevInfo, psDeviceNode);
 			if(eError != PVRSRV_OK)
@@ -2122,6 +2039,32 @@ PVRSRV_ERROR SGXGetMiscInfoKM(PVRSRV_SGXDEV_INFO	*psDevInfo,
 			return PVRSRV_OK;
 		}
 #endif 
+#if defined(SUPPORT_CPU_CACHED_BUFFERS)
+		case SGX_MISC_INFO_FLUSH_CPUCACHE_NOW:
+		{
+			SYS_DATA *psSysData;
+
+			SysAcquireData(&psSysData);
+
+			
+			OSFlushCPUCache();
+			psSysData->bFlushCPUCache = IMG_FALSE;
+
+			return PVRSRV_OK;
+		}
+		case SGX_MISC_INFO_FLUSH_CPUCACHE_QUEUE:
+		{
+			SYS_DATA *psSysData;
+
+			SysAcquireData(&psSysData);
+
+			
+			psSysData->bFlushCPUCache = IMG_TRUE;
+
+			return PVRSRV_OK;
+		}
+#endif 
+
 		case SGX_MISC_INFO_DUMP_DEBUG_INFO:
 		{
 			PVR_LOG(("User requested SGX debug info"));

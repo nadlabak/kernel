@@ -117,11 +117,6 @@ IMG_VOID PDumpDeInitCommon(IMG_VOID)
 
 #if defined(SGX_SUPPORT_COMMON_PDUMP)
 
-IMG_BOOL PDumpIsSuspended(IMG_VOID)
-{
-	return PDumpOSIsSuspended();
-}
-
 PVRSRV_ERROR PDumpRegWithFlagsKM(IMG_UINT32 ui32Reg, IMG_UINT32 ui32Data, IMG_UINT32 ui32Flags)
 {
 	PVRSRV_ERROR eErr;

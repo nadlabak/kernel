@@ -55,7 +55,7 @@ extern "C" {
 #define PVR_DBG_CALLTRACE	DBGPRIV_CALLTRACE,__FILE__, __LINE__
 #define PVR_DBG_ALLOC		DBGPRIV_ALLOC,__FILE__, __LINE__
 
-#if !defined(PVRSRV_NEED_PVR_ASSERT) && defined(DEBUG_PVR)
+#if !defined(PVRSRV_NEED_PVR_ASSERT) && defined(DEBUG)
 #define PVRSRV_NEED_PVR_ASSERT
 #endif
 
@@ -63,7 +63,7 @@ extern "C" {
 #define PVRSRV_NEED_PVR_DPF
 #endif
 
-#if !defined(PVRSRV_NEED_PVR_TRACE) && (defined(DEBUG_PVR) || defined(TIMING))
+#if !defined(PVRSRV_NEED_PVR_TRACE) && (defined(DEBUG) || defined(TIMING))
 #define PVRSRV_NEED_PVR_TRACE
 #endif
 

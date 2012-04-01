@@ -33,14 +33,8 @@
 #include <linux/platform_device.h>
 
 #include <linux/semaphore.h>
-
-#if (LINUX_VERSION_CODE > KERNEL_VERSION(2,6,29))
 #include <plat/resource.h>
 #include <plat/omap-pm.h>
-#else
-#include <mach/resource.h>
-#include <mach/omap-pm.h>
-#endif
 
 #include "sgxdefs.h"
 #include "services_headers.h"
@@ -53,11 +47,8 @@
 #define	ONE_MHZ	1000000
 #define	HZ_TO_MHZ(m) ((m) / ONE_MHZ)
 
-#if defined(SUPPORT_OMAP3430_SGXFCLK_96M)
-#define SGX_PARENT_CLOCK "cm_96m_fck"
-#else
-#define SGX_PARENT_CLOCK "core_ck"
-#endif
+#define SGX_PARENT_CLOCK_3630 "core_ck" /* 3630 */
+#define SGX_PARENT_CLOCK_3430 "core_ck"   /* 3430 */
 
 extern struct platform_device *gpsPVRLDMDev;
 
@@ -65,13 +56,22 @@ static PVRSRV_ERROR ForceMaxSGXClocks(SYS_SPECIFIC_DATA *psSysSpecData)
 {
 	PVR_UNREFERENCED_PARAMETER(psSysSpecData);
 
-	/* Pin the memory bus bw to the highest value according to CORE_REV */
-#if defined(SGX530) && (SGX_CORE_REV == 125)
-	if(cpu_is_omap3630())
-		omap_pm_set_min_bus_tput(&gpsPVRLDMDev->dev, OCP_INITIATOR_AGENT, 800000);
-#else
-	omap_pm_set_min_bus_tput(&gpsPVRLDMDev->dev, OCP_INITIATOR_AGENT, 664000);
-#endif
+	if (cpu_is_omap3430()) {
+		/* pin the memory bus bw to the highest value */
+		omap_pm_set_min_bus_tput(&gpsPVRLDMDev->dev,
+		OCP_INITIATOR_AGENT, 400000);
+	} else {
+		if (cpu_is_omap3630()) {
+			/* pin the memory bus bw to the highest value */
+			omap_pm_set_min_bus_tput(&gpsPVRLDMDev->dev,
+			OCP_INITIATOR_AGENT, 800000);
+		} else {
+			PVR_DPF((PVR_DBG_ERROR, "ForceMaxSGXClocks: \
+			Invalid OMAP Chip ID"));
+			return PVRSRV_ERROR_GENERIC;
+		}
+	}
+
 	return PVRSRV_OK;
 }
 
@@ -167,12 +167,35 @@ static inline IMG_UINT32 scale_by_rate(IMG_UINT32 val, IMG_UINT32 rate1, IMG_UIN
 
 static inline IMG_UINT32 scale_prop_to_SGX_clock(IMG_UINT32 val, IMG_UINT32 rate)
 {
-	return scale_by_rate(val, rate, SYS_SGX_CLOCK_SPEED);
+	if (cpu_is_omap3430()) {
+		return scale_by_rate(val, rate, SYS_SGX_CLOCK_SPEED_3430);
+	} else {
+		if (cpu_is_omap3630()) {
+			return scale_by_rate(val, rate, \
+			SYS_SGX_CLOCK_SPEED_3630);
+		} else {
+			PVR_DPF((PVR_DBG_ERROR, "SysInitialise: \
+			Invalid OMAP Chip ID"));
+			return PVRSRV_ERROR_GENERIC;
+		}
+	}
 }
 
 static inline IMG_UINT32 scale_inv_prop_to_SGX_clock(IMG_UINT32 val, IMG_UINT32 rate)
 {
-	return scale_by_rate(val, SYS_SGX_CLOCK_SPEED, rate);
+	if (cpu_is_omap3430()) {
+		return scale_by_rate(val, \
+		SYS_SGX_CLOCK_SPEED_3430, rate);
+	} else {
+		if (cpu_is_omap3630()) {
+			return scale_by_rate(val, \
+			SYS_SGX_CLOCK_SPEED_3630, rate);
+		} else {
+			PVR_DPF((PVR_DBG_ERROR, "SysInitialise: \
+			Invalid OMAP Chip ID"));
+			return PVRSRV_ERROR_GENERIC;
+		}
+	}
 }
 
 IMG_VOID SysGetSGXTimingInformation(SGX_TIMING_INFORMATION *psTimingInfo)
@@ -180,7 +203,17 @@ IMG_VOID SysGetSGXTimingInformation(SGX_TIMING_INFORMATION *psTimingInfo)
 	IMG_UINT32 rate;
 
 #if defined(NO_HARDWARE)
-	rate = SYS_SGX_CLOCK_SPEED;
+	if (cpu_is_omap3430()) {
+		rate = SYS_SGX_CLOCK_SPEED_3430;
+	} else {
+		if (cpu_is_omap3630()) {
+			rate = SYS_SGX_CLOCK_SPEED_3630;
+		} else {
+			PVR_DPF((PVR_DBG_ERROR, "SysInitialise: \
+			Invalid OMAP Chip ID"));
+			return PVRSRV_ERROR_GENERIC;
+		}
+	}
 #else
 	PVR_ASSERT(atomic_read(&gpsSysSpecificData->sSGXClocksEnabled) != 0);
 
@@ -202,10 +235,7 @@ PVRSRV_ERROR EnableSGXClocks(SYS_DATA *psSysData)
 {
 #if !defined(NO_HARDWARE)
 	SYS_SPECIFIC_DATA *psSysSpecData = (SYS_SPECIFIC_DATA *) psSysData->pvSysSpecificData;
-
-#if defined(SGX530) && (SGX_CORE_REV == 125)
 	long lNewRate;
-#endif
 	IMG_INT res;
 
 	if (atomic_read(&psSysSpecData->sSGXClocksEnabled) != 0)
@@ -215,7 +245,7 @@ PVRSRV_ERROR EnableSGXClocks(SYS_DATA *psSysData)
 
 	PVR_DPF((PVR_DBG_MESSAGE, "EnableSGXClocks: Enabling SGX Clocks"));
 
-#if defined(DEBUG_PVR)
+#if defined(DEBUG)
 	{
 		
 		IMG_UINT32 rate = clk_get_rate(psSysSpecData->psMPU_CK);
@@ -239,27 +269,33 @@ PVRSRV_ERROR EnableSGXClocks(SYS_DATA *psSysData)
 		return PVRSRV_ERROR_GENERIC;
 	}
 
-#if defined(SGX530) && (SGX_CORE_REV == 125)
-	if(cpu_is_omap3630()){
-		lNewRate = clk_round_rate(psSysSpecData->psSGX_FCK, SYS_SGX_CLOCK_SPEED + ONE_MHZ);
-		if (lNewRate <= 0)
-		{
-			PVR_DPF((PVR_DBG_ERROR, "EnableSGXClocks: Couldn't round SGX functional clock rate"));
-			return PVRSRV_ERROR_GENERIC;
-		}
-	
-		res = clk_set_rate(psSysSpecData->psSGX_FCK, lNewRate);
-		if (res < 0)
-		{
-			PVR_DPF((PVR_DBG_ERROR, "EnableSGXClocks: Couldn't set SGX function clock rate (%d)", res));
+	if (cpu_is_omap3430()) {
+		lNewRate = clk_round_rate(psSysSpecData->psSGX_FCK, SYS_SGX_CLOCK_SPEED_3430 + ONE_MHZ);
+	} else {
+		if (cpu_is_omap3630()) {
+			lNewRate = clk_round_rate(psSysSpecData->psSGX_FCK, SYS_SGX_CLOCK_SPEED_3630 + ONE_MHZ);
+		} else {
+			PVR_DPF((PVR_DBG_ERROR, "EnableSGXClocks: \
+			Invalid OMAP Chip ID"));
 			return PVRSRV_ERROR_GENERIC;
 		}
 	}
 
-#endif
+	if (lNewRate <= 0)
+	{
+		PVR_DPF((PVR_DBG_ERROR, "EnableSGXClocks: Couldn't round SGX functional clock rate"));
+		return PVRSRV_ERROR_GENERIC;
+	}
+
+	res = clk_set_rate(psSysSpecData->psSGX_FCK, lNewRate);
+	if (res < 0)
+	{
+		PVR_DPF((PVR_DBG_ERROR, "EnableSGXClocks: Couldn't set SGX function clock rate (%d)", res));
+		return PVRSRV_ERROR_GENERIC;
+	}
 
 	ForceMaxSGXClocks(psSysSpecData);
-	
+
 	atomic_set(&psSysSpecData->sSGXClocksEnabled, 1);
 
 #else	/* !defined(NO_HARDWARE) */
@@ -274,6 +310,8 @@ IMG_VOID DisableSGXClocks(SYS_DATA *psSysData)
 #if !defined(NO_HARDWARE)
 	SYS_SPECIFIC_DATA *psSysSpecData = (SYS_SPECIFIC_DATA *) psSysData->pvSysSpecificData;
 
+	/*omap_pm_set_min_bus_tput(&gpsPVRLDMDev->dev, OCP_INITIATOR_AGENT, 0); */
+	
 	if (atomic_read(&psSysSpecData->sSGXClocksEnabled) == 0)
 	{
 		return;
@@ -291,8 +329,7 @@ IMG_VOID DisableSGXClocks(SYS_DATA *psSysData)
 		clk_disable(psSysSpecData->psSGX_FCK);
 	}
 
-	omap_pm_set_min_bus_tput(&gpsPVRLDMDev->dev, OCP_INITIATOR_AGENT, 0);
-
+	
 	atomic_set(&psSysSpecData->sSGXClocksEnabled, 0);
 
 #else	
@@ -308,7 +345,7 @@ PVRSRV_ERROR EnableSystemClocks(SYS_DATA *psSysData)
 	PVRSRV_ERROR eError;
 	IMG_BOOL bPowerLock;
 
-#if defined(DEBUG_PVR) || defined(TIMING)
+#if defined(DEBUG) || defined(TIMING)
 	IMG_INT rate;
 	struct clk *sys_ck;
 	IMG_CPU_PHYADDR     TimerRegPhysBase;
@@ -330,7 +367,17 @@ PVRSRV_ERROR EnableSystemClocks(SYS_DATA *psSysData)
 
 		atomic_set(&psSysSpecData->sSGXClocksEnabled, 0);
 
-		psCLK = clk_get(NULL, SGX_PARENT_CLOCK);
+		if (cpu_is_omap3430()) {
+			psCLK = clk_get(NULL, SGX_PARENT_CLOCK_3430);
+		} else {
+			if (cpu_is_omap3630()) {
+				psCLK = clk_get(NULL, SGX_PARENT_CLOCK_3630);
+			} else {
+				PVR_DPF((PVR_DBG_ERROR, "EnableSsystemClocks: \
+				Couldn't get Core Clock"));
+				goto ExitError;
+			}
+		}
 		if (IS_ERR(psCLK))
 		{
 			PVR_DPF((PVR_DBG_ERROR, "EnableSsystemClocks: Couldn't get Core Clock"));
@@ -354,7 +401,7 @@ PVRSRV_ERROR EnableSystemClocks(SYS_DATA *psSysData)
 		}
 		psSysSpecData->psSGX_ICK = psCLK;
 
-#if defined(DEBUG_PVR)
+#if defined(DEBUG)
 		psCLK = clk_get(NULL, "mpu_ck");
 		if (IS_ERR(psCLK))
 		{
@@ -383,7 +430,7 @@ PVRSRV_ERROR EnableSystemClocks(SYS_DATA *psSysData)
 	}
 
 
-#if defined(DEBUG_PVR) || defined(TIMING)
+#if defined(DEBUG) || defined(TIMING)
 	
 	psCLK = clk_get(NULL, "gpt11_fck");
 	if (IS_ERR(psCLK))
@@ -488,7 +535,7 @@ PVRSRV_ERROR EnableSystemClocks(SYS_DATA *psSysData)
 	eError = PVRSRV_OK;
 	goto Exit;
 
-#if defined(DEBUG_PVR) || defined(TIMING)
+#if defined(DEBUG) || defined(TIMING)
 ExitDisableGPT11ICK:
 	clk_disable(psSysSpecData->psGPT11_ICK);
 ExitDisableGPT11FCK:
@@ -510,7 +557,7 @@ IMG_VOID DisableSystemClocks(SYS_DATA *psSysData)
 {
 	SYS_SPECIFIC_DATA *psSysSpecData = (SYS_SPECIFIC_DATA *) psSysData->pvSysSpecificData;
 	IMG_BOOL bPowerLock;
-#if defined(DEBUG_PVR) || defined(TIMING)
+#if defined(DEBUG) || defined(TIMING)
 	IMG_CPU_PHYADDR TimerRegPhysBase;
 	IMG_HANDLE hTimerDisable;
 	IMG_UINT32 *pui32TimerDisable;
@@ -528,7 +575,7 @@ IMG_VOID DisableSystemClocks(SYS_DATA *psSysData)
 		PowerLockUnwrap(psSysSpecData);
 	}
 
-#if defined(DEBUG_PVR) || defined(TIMING)
+#if defined(DEBUG) || defined(TIMING)
 	
 	TimerRegPhysBase.uiAddr = SYS_OMAP3430_GP11TIMER_ENABLE_SYS_PHYS_BASE;
 	pui32TimerDisable = OSMapPhysToLin(TimerRegPhysBase,

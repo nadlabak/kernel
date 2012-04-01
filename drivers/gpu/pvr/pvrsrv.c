@@ -419,8 +419,7 @@ PVRSRV_ERROR PVRSRVFinaliseSystem_CompatCheck_AnyCb(PVRSRV_DEVICE_NODE *psDevice
 	{
 		PVR_DPF((PVR_DBG_ERROR,"PVRSRVFinaliseSystem: Failed PVRSRVDevInitCompatCheck call (device index: %d)", psDeviceNode->sDevId.ui32DeviceIndex));
 	}
-	/*return eError;*/
-	return PVRSRV_OK;
+	return eError;
 }
 
 
@@ -771,8 +770,7 @@ PVRSRV_ERROR IMG_CALLCONV PVRSRVGetMiscInfoKM(PVRSRV_MISC_INFO *psMiscInfo)
 										|PVRSRV_MISC_INFO_CLOCKGATE_PRESENT
 										|PVRSRV_MISC_INFO_MEMSTATS_PRESENT
 										|PVRSRV_MISC_INFO_GLOBALEVENTOBJECT_PRESENT
-										|PVRSRV_MISC_INFO_DDKVERSION_PRESENT
-										|PVRSRV_MISC_INFO_CPUCACHEFLUSH_PRESENT))
+										|PVRSRV_MISC_INFO_DDKVERSION_PRESENT))
 	{
 		PVR_DPF((PVR_DBG_ERROR,"PVRSRVGetMiscInfoKM: invalid state request flags"));
 		return PVRSRV_ERROR_INVALID_PARAMS;			
@@ -890,42 +888,6 @@ PVRSRV_ERROR IMG_CALLCONV PVRSRVGetMiscInfoKM(PVRSRV_MISC_INFO *psMiscInfo)
 			}
 		}
 	}
-
-#if defined(SUPPORT_CPU_CACHED_BUFFERS)
-	if((psMiscInfo->ui32StateRequest & PVRSRV_MISC_INFO_CPUCACHEFLUSH_PRESENT) != 0UL)
-	{
-		if(psMiscInfo->bDeferCPUCacheFlush)
-		{
-			
-			if(!psMiscInfo->bCPUCacheFlushAll)
-			{
-				
-
-
-				PVR_DPF((PVR_DBG_MESSAGE,"PVRSRVGetMiscInfoKM: don't support deferred range flushes"));
-				PVR_DPF((PVR_DBG_MESSAGE,"                     using deferred flush all instead"));
-			}
-			
-			psSysData->bFlushAll = IMG_TRUE;
-		}
-		else
-		{
-			
-			if(psMiscInfo->bCPUCacheFlushAll)
-			{
-				
-				OSFlushCPUCacheKM();
-				
-				psSysData->bFlushAll = IMG_FALSE;
-			}
-			else
-			{
-				
-				OSFlushCPUCacheRangeKM(psMiscInfo->pvRangeAddrStart, psMiscInfo->pvRangeAddrEnd);
-			}
-		}
-	}
-#endif 
 
 	return PVRSRV_OK;
 }

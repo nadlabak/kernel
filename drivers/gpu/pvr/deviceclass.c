@@ -1446,7 +1446,7 @@ IMG_BOOL PVRGetDisplayClassJTable(PVRSRV_DC_DISP2SRV_KMJTABLE *psJTable)
 #endif
 	psJTable->pfnPVRSRVRegisterSystemISRHandler = PVRSRVRegisterSystemISRHandler;
 	psJTable->pfnPVRSRVRegisterPowerDevice = PVRSRVRegisterPowerDevice;
-	
+
 	return IMG_TRUE;
 }
 

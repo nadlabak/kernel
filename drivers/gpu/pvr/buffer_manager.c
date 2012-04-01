@@ -89,6 +89,99 @@ AllocMemory (BM_CONTEXT				*pBMContext,
 	
 
 
+
+	if (uFlags & PVRSRV_MEM_EXPORTABLEDEVICEMEM2)
+	{
+		IMG_UINT32 ui32PageSize;
+		IMG_VOID *pvCPUVAddr;
+		IMG_BOOL bStatus;
+		IMG_UINT32 ui32PageCount;
+
+		ui32PageSize = OSGetPageSize();
+		uSize = (uSize + ui32PageSize - 1) & -ui32PageSize;
+		uDevVAddrAlignment = MIN(ui32PageSize, uDevVAddrAlignment);
+
+		ui32PageCount = uSize / ui32PageSize;
+
+		bStatus = BM_ImportMemory ((IMG_VOID *)psBMHeap,
+								   uSize,
+								   &uSize,
+								   &pMapping,
+								   uFlags & ~PVRSRV_MEM_EXPORTABLEDEVICEMEM2,
+								   (IMG_UINTPTR_T *) &pvCPUVAddr);
+
+		if (!bStatus) return bStatus;
+
+		if(!pMapping)
+		{
+			PVR_DPF((PVR_DBG_ERROR, "AllocMemory: internal error.  pMapping not set when it should have been\n"));
+
+			BM_FreeMemory ((IMG_VOID *)psBMHeap,
+						   (IMG_UINTPTR_T) pvCPUVAddr,
+						   pMapping);
+			
+			return IMG_FALSE;
+		}
+
+		if(pMapping->psSysAddr && (IMG_UINTPTR_T)pMapping->psSysAddr != 0x4b4b4b4b)
+		{
+			PVR_DPF((PVR_DBG_ERROR, "AllocMemory: internal error.  psSysAddr set when it should not have been\n"));
+
+			BM_FreeMemory ((IMG_VOID *)psBMHeap,
+						   (IMG_UINTPTR_T) pvCPUVAddr,
+						   pMapping);
+			
+			return IMG_FALSE;
+		}
+		
+		pMapping->uSize = uSize;
+		pMapping->pBMHeap = psBMHeap;
+
+		pMapping->CpuVAddr = pvCPUVAddr;
+		pBuf->hOSMemHandle = pMapping->hOSMemHandle;
+		pBuf->pMapping = pMapping;
+
+		pBuf->DevVAddr = pMapping->DevVAddr;
+		pBuf->CpuVAddr = pMapping->CpuVAddr;
+		pBuf->CpuPAddr = pMapping->CpuPAddr;
+		
+		pMapping->pArena = pArena;
+
+		pMapping->pBMHeap = psBMHeap;
+		pBuf->pMapping = pMapping;
+
+		pBuf->pMapping->eCpuMemoryOrigin = hm_wrapped_virtaddr;
+
+		PVR_DPF ((PVR_DBG_MESSAGE,
+				  "AllocMemory: psMapping=%08x: DevV=%08X CpuV=%08x CpuP=%08X uSize=0x%x",
+				  (IMG_UINTPTR_T)pMapping,
+				  pMapping->DevVAddr.uiAddr,
+				  (IMG_UINTPTR_T)pMapping->CpuVAddr,
+				  pMapping->CpuPAddr.uiAddr,
+				  pMapping->uSize));
+		
+		PVR_DPF ((PVR_DBG_MESSAGE,
+				  "AllocMemory: pBuf=%08x: DevV=%08X CpuV=%08x CpuP=%08X uSize=0x%x",
+				  (IMG_UINTPTR_T)pBuf,
+				  pBuf->DevVAddr.uiAddr,
+				  (IMG_UINTPTR_T)pBuf->CpuVAddr,
+				  pBuf->CpuPAddr.uiAddr,
+				  uSize));
+		
+		if (((pBuf->DevVAddr.uiAddr) & (uDevVAddrAlignment - 1)) != 0)
+		{
+			PVR_DPF((PVR_DBG_ERROR, "AllocMemory: assertion '((pBuf->DevVAddr.uiAddr) & (uDevVAddrAlignment - 1)) == 0)' failed.  pBuf->DevVAddr.uiAddr = 0x%08x, uDevVAddrAlignment = 0x%x",
+					 pBuf->DevVAddr.uiAddr, uDevVAddrAlignment));
+
+			BM_FreeMemory ((IMG_VOID *)psBMHeap,
+						   (IMG_UINTPTR_T) pvCPUVAddr,
+						   pMapping);
+			return IMG_FALSE;
+		}
+
+		return IMG_TRUE;
+	}
+
 	if(uFlags & PVRSRV_MEM_RAM_BACKED_ALLOCATION)
 	{
 		if(uFlags & PVRSRV_MEM_USER_SUPPLIED_DEVVADDR)
@@ -575,7 +668,14 @@ FreeBuf (BM_BUF *pBuf, IMG_UINT32 ui32Flags)
 		{
 			OSReleaseSubMemHandle(pBuf->hOSMemHandle, ui32Flags);
 		}
-		if(ui32Flags & PVRSRV_MEM_RAM_BACKED_ALLOCATION)
+
+		if(ui32Flags & PVRSRV_MEM_EXPORTABLEDEVICEMEM2)
+		{
+			BM_FreeMemory ((IMG_VOID *)pMapping->pBMHeap,
+						   IMG_NULL,
+						   pMapping);
+		}
+		else if(ui32Flags & PVRSRV_MEM_RAM_BACKED_ALLOCATION)
 		{
 			
 
@@ -1306,7 +1406,7 @@ BM_Wrap (	IMG_HANDLE hDevMemHeap,
 
 	uFlags = psBMHeap->ui32Attribs & (PVRSRV_HAP_CACHETYPE_MASK | PVRSRV_HAP_MAPTYPE_MASK);
 
-	if ((pui32Flags != IMG_NULL) && ((*pui32Flags & PVRSRV_HAP_CACHETYPE_MASK) != 0))
+	if (pui32Flags && (*pui32Flags & PVRSRV_HAP_CACHETYPE_MASK))
 	{
 		uFlags &= ~PVRSRV_HAP_CACHETYPE_MASK;
 		uFlags |= *pui32Flags & PVRSRV_HAP_CACHETYPE_MASK;
@@ -1666,7 +1766,7 @@ DevMemoryFree (BM_MAPPING *pMapping)
                     ui32PSize, 
                     pMapping->pBMHeap->sDevArena.ui32DataPageSize,
                     (IMG_HANDLE)pMapping,
-                    (pMapping->ui32Flags & PVRSRV_MEM_INTERLEAVED) ? IMG_TRUE : IMG_FALSE);
+                    (IMG_BOOL)(pMapping->ui32Flags & PVRSRV_MEM_INTERLEAVED));
 #endif
 
 	psDeviceNode = pMapping->pBMHeap->pBMContext->psDeviceNode;
@@ -1714,6 +1814,8 @@ BM_ImportMemory (IMG_VOID *pH,
 		PVR_DPF ((PVR_DBG_ERROR, "BM_ImportMemory: failed BM_MAPPING alloc"));
 		goto fail_exit;
 	}
+
+	pMapping->psSysAddr = (IMG_SYS_PHYADDR *)0x4b4b4b4b;
 
 	pMapping->hOSMemHandle = 0;
 	pMapping->CpuVAddr = 0;

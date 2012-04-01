@@ -935,8 +935,6 @@ SGXDevInitPart2BW(IMG_UINT32 ui32BridgeID,
 	}
 
 	
-	
-	
 	eError = PVRSRVLookupHandle(psPerProc->psHandleBase,
 						   &hDummy,
 						   psSGXDevInitPart2IN->sInitInfo.hKernelCCBMemInfo,
@@ -1175,8 +1173,6 @@ SGXDevInitPart2BW(IMG_UINT32 ui32BridgeID,
 		eError = PVRSRVDissociateDeviceMemKM(hDevCookieInt, hHandle);
 		bDissociateFailed |= (IMG_BOOL)(eError != PVRSRV_OK);
 	}
-
-	 
 
 	
 	if(bDissociateFailed)

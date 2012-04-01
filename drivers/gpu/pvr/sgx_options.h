@@ -24,7 +24,7 @@
  *
  ******************************************************************************/
 
-#if defined(DEBUG_PVR) || defined (INTERNAL_TEST)
+#if defined(DEBUG) || defined (INTERNAL_TEST)
 #define DEBUG_SET_OFFSET	OPTIONS_BIT0
 #define OPTIONS_BIT0		0x1
 #else
@@ -126,6 +126,8 @@
 #else
 #define OPTIONS_BIT14		0x0
 #endif 
+
+
 
 #if defined(SUPPORT_ACTIVE_POWER_MANAGEMENT) || defined (INTERNAL_TEST)
 #define SUPPORT_ACTIVE_POWER_MANAGEMENT_SET_OFFSET	OPTIONS_BIT15
