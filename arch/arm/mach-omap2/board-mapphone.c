@@ -1135,6 +1135,20 @@ static void __init mapphone_als_init(void)
 		else
 			pr_err("%s: Cann't get lens loss coeff\n", __func__);
 
+		als_val = of_get_property(als_node, DT_PROP_MANUAL_ALS_CONFIG,
+									&len);
+		if (als_val && len)
+			omap3430_als_light_data.manual_als_config = *als_val;
+		else
+			pr_err("%s: Cann't get manual als config\n", __func__);
+
+		als_val = of_get_property(als_node, DT_PROP_ALS_ENABLED, &len);
+
+		if (als_val && len)
+			omap3430_als_light_data.als_enabled = *als_val;
+		else
+			pr_err("%s: Cann't get manual als config\n", __func__);
+
 		of_node_put(als_node);
 	}
 
@@ -1486,6 +1500,9 @@ static struct lm3530_platform_data omap3430_als_light_data = {
 	.upper_curr_sel = 6,
 	.lower_curr_sel = 3,
 	.lens_loss_coeff = 6,
+	.manual_als_config = 0x64,
+	.als_enabled = 1,
+
 };
 
 static struct lm3554_platform_data mapphone_camera_flash_3554 = {

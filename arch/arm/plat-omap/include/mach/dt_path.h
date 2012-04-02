@@ -163,6 +163,8 @@
 #define DT_PROP_UPPER_CURR_SEL		"upper_curr_sel"
 #define DT_PROP_LOWER_CURR_SEL		"lower_curr_sel"
 #define DT_PROP_LENS_LOSS_COEFF		"lens_loss_coeff"
+#define DT_PROP_MANUAL_ALS_CONFIG	"manual_als_config"
+#define DT_PROP_ALS_ENABLED		"als_enabled"
 
 /* Video out Node */
 #define DT_PATH_VIDEO_OUT	"/System@0/VideoOut@0"

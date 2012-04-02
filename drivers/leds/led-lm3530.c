@@ -28,6 +28,13 @@
 #include <linux/led-lm3530.h>
 #include <linux/types.h>
 
+#undef CONFIG_HAS_EARLYSUSPEND
+
+#define GEN_CONFIG_PWM_BIT 0x20
+
+static int pwm_disable_manual = 0;
+static int pwm_disable_auto = 0;
+
 int als_resistor_val[16] = {1, 9260, 4630, 3090, 2310,
 1850, 1540, 1320, 1160, 1030, 925, 842, 772, 712, 661, 617};
 
@@ -56,22 +63,22 @@ struct lm3530_reg {
 	const char *name;
 	uint8_t reg;
 } lm3530_regs[] = {
-	{ "GEN_CONFIG",           LM3530_GEN_CONFIG },
-	{ "ALS_CONFIG",           LM3530_ALS_CONFIG },
-	{ "VERSION_REG",          LM3530_VERSION_REG },
+	{ "GEN_CONFIG",		   LM3530_GEN_CONFIG },
+	{ "ALS_CONFIG",		   LM3530_ALS_CONFIG },
+	{ "VERSION_REG",		  LM3530_VERSION_REG },
 	{ "BRIGHTNESS_RAMP_RATE", LM3530_BRIGHTNESS_RAMP_RATE },
-	{ "ALS_ZONE_REG",         LM3530_ALS_ZONE_REG },
+	{ "ALS_ZONE_REG",		 LM3530_ALS_ZONE_REG },
 	{ "ALS_RESISTOR_SELECT",  LM3530_ALS_RESISTOR_SELECT },
 	{ "BRIGHTNESS_CTRL_REG",  LM3530_BRIGHTNESS_CTRL_REG },
-	{ "ALS_ZB0_REG",          LM3530_ALS_ZB0_REG },
-	{ "ALS_ZB1_REG",          LM3530_ALS_ZB1_REG },
-	{ "ALS_ZB2_REG",          LM3530_ALS_ZB2_REG },
-	{ "ALS_ZB3_REG",          LM3530_ALS_ZB3_REG },
-	{ "ALS_Z0T_REG",          LM3530_ALS_Z0T_REG },
-	{ "ALS_Z1T_REG",          LM3530_ALS_Z1T_REG },
-	{ "ALS_Z2T_REG",          LM3530_ALS_Z2T_REG },
-	{ "ALS_Z3T_REG",          LM3530_ALS_Z3T_REG },
-	{ "ALS_Z4T_REG",          LM3530_ALS_Z4T_REG },
+	{ "ALS_ZB0_REG",		  LM3530_ALS_ZB0_REG },
+	{ "ALS_ZB1_REG",		  LM3530_ALS_ZB1_REG },
+	{ "ALS_ZB2_REG",		  LM3530_ALS_ZB2_REG },
+	{ "ALS_ZB3_REG",		  LM3530_ALS_ZB3_REG },
+	{ "ALS_Z0T_REG",		  LM3530_ALS_Z0T_REG },
+	{ "ALS_Z1T_REG",		  LM3530_ALS_Z1T_REG },
+	{ "ALS_Z2T_REG",		  LM3530_ALS_Z2T_REG },
+	{ "ALS_Z3T_REG",		  LM3530_ALS_Z3T_REG },
+	{ "ALS_Z4T_REG",		  LM3530_ALS_Z4T_REG },
 };
 
 #ifdef CONFIG_HAS_EARLYSUSPEND
@@ -144,29 +151,29 @@ static int lm3530_write_reg(struct lm3530_data *als_data,
 static int ld_lm3530_init_registers(struct lm3530_data *als_data)
 {
 	if (lm3530_write_reg(als_data, LM3530_ALS_CONFIG,
-			     als_data->als_pdata->als_config) ||
-	    lm3530_write_reg(als_data, LM3530_BRIGHTNESS_RAMP_RATE,
-			     als_data->als_pdata->brightness_ramp) ||
-	    lm3530_write_reg(als_data, LM3530_ALS_RESISTOR_SELECT,
-			     als_data->als_pdata->als_resistor_sel) ||
-	    lm3530_write_reg(als_data, LM3530_ALS_ZB0_REG,
-			     als_data->als_pdata->zone_boundary_0) ||
-	    lm3530_write_reg(als_data, LM3530_ALS_ZB1_REG,
-			     als_data->als_pdata->zone_boundary_1) ||
-	    lm3530_write_reg(als_data, LM3530_ALS_ZB2_REG,
-			     als_data->als_pdata->zone_boundary_2) ||
-	    lm3530_write_reg(als_data, LM3530_ALS_ZB3_REG,
-			     als_data->als_pdata->zone_boundary_3) ||
-	    lm3530_write_reg(als_data, LM3530_ALS_Z0T_REG,
-			     als_data->als_pdata->zone_target_0) ||
-	    lm3530_write_reg(als_data, LM3530_ALS_Z1T_REG,
-			     als_data->als_pdata->zone_target_1) ||
-	    lm3530_write_reg(als_data, LM3530_ALS_Z2T_REG,
-			     als_data->als_pdata->zone_target_2) ||
-	    lm3530_write_reg(als_data, LM3530_ALS_Z3T_REG,
-			     als_data->als_pdata->zone_target_3) ||
-	    lm3530_write_reg(als_data, LM3530_ALS_Z4T_REG,
-			     als_data->als_pdata->zone_target_4)) {
+				 als_data->als_pdata->als_config) ||
+		lm3530_write_reg(als_data, LM3530_BRIGHTNESS_RAMP_RATE,
+				 als_data->als_pdata->brightness_ramp) ||
+		lm3530_write_reg(als_data, LM3530_ALS_RESISTOR_SELECT,
+				 als_data->als_pdata->als_resistor_sel) ||
+		lm3530_write_reg(als_data, LM3530_ALS_ZB0_REG,
+				 als_data->als_pdata->zone_boundary_0) ||
+		lm3530_write_reg(als_data, LM3530_ALS_ZB1_REG,
+				 als_data->als_pdata->zone_boundary_1) ||
+		lm3530_write_reg(als_data, LM3530_ALS_ZB2_REG,
+				 als_data->als_pdata->zone_boundary_2) ||
+		lm3530_write_reg(als_data, LM3530_ALS_ZB3_REG,
+				 als_data->als_pdata->zone_boundary_3) ||
+		lm3530_write_reg(als_data, LM3530_ALS_Z0T_REG,
+				 als_data->als_pdata->zone_target_0) ||
+		lm3530_write_reg(als_data, LM3530_ALS_Z1T_REG,
+				 als_data->als_pdata->zone_target_1) ||
+		lm3530_write_reg(als_data, LM3530_ALS_Z2T_REG,
+				 als_data->als_pdata->zone_target_2) ||
+		lm3530_write_reg(als_data, LM3530_ALS_Z3T_REG,
+				 als_data->als_pdata->zone_target_3) ||
+		lm3530_write_reg(als_data, LM3530_ALS_Z4T_REG,
+				 als_data->als_pdata->zone_target_4)) {
 		pr_err("%s:Register initialization failed\n", __func__);
 		return -EINVAL;
 	}
@@ -174,18 +181,22 @@ static int ld_lm3530_init_registers(struct lm3530_data *als_data)
 }
 
 static void ld_lm3530_brightness_set(struct led_classdev *led_cdev,
-				     enum led_brightness value)
+					 enum led_brightness value)
 {
 	int brightness = 0;
 	int error = 0;
 	int old_led_on;
 	struct lm3530_data *als_data =
-	    container_of(led_cdev, struct lm3530_data, led_dev);
+		container_of(led_cdev, struct lm3530_data, led_dev);
 
 	if (als_data->mode == AUTOMATIC)
 		brightness = als_data->als_pdata->gen_config;
 	else
 		brightness = als_data->als_pdata->manual_current;
+
+	if (lm3530_debug)
+		pr_info("%s: value = 0x%x brightness = 0x%x\n",
+			 __func__, value, brightness);
 
 	if (value == LED_OFF) {
 		als_data->led_on = 0;
@@ -212,7 +223,7 @@ static void ld_lm3530_brightness_set(struct led_classdev *led_cdev,
 		old_led_on = als_data->led_on;
 		als_data->led_on = 1;
 
-		if (als_data->mode != MANUAL && old_led_on == 0) {
+		if (als_data->als_pdata->als_enabled == 1 && old_led_on == 0) {
 			disable_irq(als_data->client->irq);
 			queue_work(als_data->working_queue, &als_data->wq);
 		}
@@ -220,7 +231,7 @@ static void ld_lm3530_brightness_set(struct led_classdev *led_cdev,
 }
 
 static ssize_t ld_lm3530_als_show(struct device *dev,
-			      struct device_attribute *attr, char *buf)
+				  struct device_attribute *attr, char *buf)
 {
 	struct i2c_client *client = container_of(dev->parent, struct i2c_client,
 						 dev);
@@ -240,13 +251,16 @@ static ssize_t ld_lm3530_als_store(struct device *dev, struct device_attribute
 	unsigned long mode_value;
 	uint8_t brightness = 0;
 
+	if (als_data->als_pdata->als_enabled == 0)
+		return MANUAL;
+
 	error = strict_strtoul(buf, 10, &mode_value);
 
 	if (error < 0)
 		return -1;
 	if (mode_value != MANUAL
-		    && mode_value != AUTOMATIC
-		    && mode_value != MANUAL_SENSOR)
+			&& mode_value != AUTOMATIC
+			&& mode_value != MANUAL_SENSOR)
 		return -1;
 
 	if (mode_value == AUTOMATIC)
@@ -260,20 +274,20 @@ static ssize_t ld_lm3530_als_store(struct device *dev, struct device_attribute
 					 brightness);
 		if (error) {
 			pr_err("%s:Initialize Gen Config Reg failed %d\n",
-			       __func__, error);
+				   __func__, error);
 			als_data->mode = -1;
 			return -1;
 		}
 		als_data->mode = AUTOMATIC;
 	} else {
 		als_data->mode = mode_value;
-		config = LM3530_MANUAL_VALUE;
+		config = als_data->als_pdata->manual_als_config;
 		if (mode_value != MANUAL)
 			config |= LM3530_SENSOR_ENABLE;
 		error = lm3530_write_reg(als_data, LM3530_ALS_CONFIG, config);
 		if (error) {
 			pr_err("%s:Failed to set manual mode:%d\n",
-			       __func__, error);
+				   __func__, error);
 			return -1;
 		}
 
@@ -292,7 +306,7 @@ static ssize_t ld_lm3530_als_store(struct device *dev, struct device_attribute
 					 2);
 		if (error) {
 			pr_err("%s:Failed to set brightness:%d\n",
-			       __func__, error);
+				   __func__, error);
 			return -1;
 		}
 	}
@@ -334,7 +348,7 @@ static ssize_t ld_lm3530_pwm_store(struct device *dev, struct device_attribute
 
 	if (lm3530_write_reg(als_data, LM3530_GEN_CONFIG, pwm_val)) {
 		pr_err("%s:writing failed while setting pwm mode:%d\n",
-		       __func__, error);
+			   __func__, error);
 		return -1;
 	}
 
@@ -353,29 +367,29 @@ irqreturn_t ld_lm3530_irq_handler(int irq, void *dev)
 }
 
 static ssize_t ld_lm3530_registers_show(struct device *dev,
-			      struct device_attribute *attr, char *buf)
+				  struct device_attribute *attr, char *buf)
 {
 	struct i2c_client *client = container_of(dev->parent, struct i2c_client,
 						 dev);
 	struct lm3530_data *als_data = i2c_get_clientdata(client);
 	unsigned i, n, reg_count;
-	uint8_t value;
+	uint8_t value = 0;
 
 	reg_count = sizeof(lm3530_regs) / sizeof(lm3530_regs[0]);
 	for (i = 0, n = 0; i < reg_count; i++) {
 		lm3530_read_reg(als_data, lm3530_regs[i].reg, &value);
 		n += scnprintf(buf + n, PAGE_SIZE - n,
-			       "%-20s = 0x%02X\n",
-			       lm3530_regs[i].name,
-			       value);
+				   "%-20s = 0x%02X\n",
+				   lm3530_regs[i].name,
+				   value);
 	}
 
 	return n;
 }
 
 static ssize_t ld_lm3530_registers_store(struct device *dev,
-			       struct device_attribute *attr,
-			       const char *buf, size_t count)
+				   struct device_attribute *attr,
+				   const char *buf, size_t count)
 {
 	struct i2c_client *client = container_of(dev->parent, struct i2c_client,
 						 dev);
@@ -389,10 +403,11 @@ static ssize_t ld_lm3530_registers_store(struct device *dev,
 		return -1;
 	}
 
-	if (sscanf(buf, "%s %x", name, &value) != 2) {
+	if (sscanf(buf, "%29s %x", name, &value) != 2) {
 		pr_err("%s:unable to parse input\n", __func__);
 		return -1;
 	}
+	name[sizeof(name)-1] = '\0';
 
 	reg_count = sizeof(lm3530_regs) / sizeof(lm3530_regs[0]);
 	for (i = 0; i < reg_count; i++) {
@@ -421,13 +436,13 @@ void ld_lm3530_work_queue(struct work_struct *work)
 	int ret;
 	int light_value;
 	struct lm3530_data *als_data =
-	    container_of(work, struct lm3530_data, wq);
+		container_of(work, struct lm3530_data, wq);
 
 	ret = lm3530_read_reg(als_data,
-			      LM3530_ALS_ZONE_REG, &als_data->zone);
+				  LM3530_ALS_ZONE_REG, &als_data->zone);
 	if (ret != 0) {
 		pr_err("%s:Unable to read ALS Zone read back: %d\n",
-		       __func__, ret);
+			   __func__, ret);
 
 		enable_irq(als_data->client->irq);
 
@@ -445,7 +460,7 @@ void ld_lm3530_work_queue(struct work_struct *work)
 	als_data->zone = als_data->zone & LM3530_ALS_READ_MASK;
 	if (lm3530_debug)
 		pr_info("%s:ALS Zone read back: %d\n",
-		       __func__, als_data->zone);
+			   __func__, als_data->zone);
 
 	light_value = als_data->zone *  (als_data->current_divisor - 1);
 
@@ -456,7 +471,7 @@ void ld_lm3530_work_queue(struct work_struct *work)
 
 	if (lm3530_debug) {
 		pr_err("%s:Modified ALS Zone being sent: %d\n",
-		       __func__, light_value);
+			   __func__, light_value);
 		pr_err("%s:Lux value: %i\n", __func__,
 			als_data->lux_passed_value[als_data->zone].lux_value);
 	}
@@ -483,8 +498,13 @@ static int convert_to_lux(struct lm3530_data *als_data, int zone_value)
 		divisor = 1;
 
 	mv_conv = ((zone_value * 1000) / 255);
-	current_conv = (mv_conv * 1000) /
+	if ((als_data->als_pdata->als_resistor_sel & 0xF0) == 0)
+		current_conv = (mv_conv * 1000) /
+		als_resistor_val[als_data->als_pdata->als_resistor_sel];
+	else
+		current_conv = (mv_conv * 1000) /
 		als_resistor_val[(als_data->als_pdata->als_resistor_sel & 0xF0) >> 4];
+
 	return (current_conv * 100) / divisor;
 }
 
@@ -545,15 +565,15 @@ static int ld_lm3530_probe(struct i2c_client *client,
 	memset(als_data->current_array, 0, ARRAY_SIZE(als_data->current_array));
 
 	if ((pdata->upper_curr_sel > 7) ||
-	    (pdata->lower_curr_sel > pdata->upper_curr_sel)) {
+		(pdata->lower_curr_sel > pdata->upper_curr_sel)) {
 		pr_err("%s: Incorrect current select values\n", __func__);
 		error = -ENODEV;
 		goto error_invalid_current_select;
 	}
 	/* Determine the value to divide the brightness value passed in */
 	als_data->current_divisor =
-	    (LM3530_MAX_LED_VALUE /
-	     ((pdata->upper_curr_sel - pdata->lower_curr_sel) + 1)) + 1;
+		(LM3530_MAX_LED_VALUE /
+		 ((pdata->upper_curr_sel - pdata->lower_curr_sel) + 1)) + 1;
 	if (als_data->current_divisor <= 0) {
 		pr_err("%s: Incorrect divisor for current\n", __func__);
 		error = -ENODEV;
@@ -566,52 +586,65 @@ static int ld_lm3530_probe(struct i2c_client *client,
 
 	ld_lm3530_lux_conv(als_data);
 
-	als_data->idev = input_allocate_device();
-	if (!als_data->idev) {
-		error = -ENOMEM;
-		pr_err("%s: input device allocate failed: %d\n", __func__,
-		       error);
-		goto error_input_allocate_failed;
-	}
+	if (als_data->als_pdata->als_enabled == 1) {
+		als_data->idev = input_allocate_device();
+		if (!als_data->idev) {
+			error = -ENOMEM;
+			pr_err("%s: input device allocate failed: %d\n",
+						__func__, error);
+			goto error_input_allocate_failed;
+		}
 
-	als_data->idev->name = LD_LM3530_NAME;
-	input_set_capability(als_data->idev, EV_MSC, MSC_RAW);
-	input_set_capability(als_data->idev, EV_LED, LED_MISC);
+		als_data->idev->name =  LD_LM3530_NAME;
+		input_set_capability(als_data->idev, EV_MSC, MSC_RAW);
+		input_set_capability(als_data->idev, EV_LED, LED_MISC);
+	}
 
 	als_data->led_dev.name = LD_LM3530_LED_DEV;
 	als_data->led_dev.brightness_set = ld_lm3530_brightness_set;
 	als_data->led_on = 1;
 
-	als_data->working_queue = create_singlethread_workqueue("als_wq");
-	if (!als_data->working_queue) {
-		pr_err("%s: Cannot create work queue\n", __func__);
-		error = -ENOMEM;
-		goto error_create_wq_failed;
+	als_data->last_requested_brightness = pdata->power_up_gen_config;
+
+	if (als_data->als_pdata->als_enabled == 1) {
+		als_data->working_queue =
+				create_singlethread_workqueue("als_wq");
+		if (!als_data->working_queue) {
+			pr_err("%s: Cannot create work queue\n", __func__);
+			error = -ENOMEM;
+			goto error_create_wq_failed;
+		}
 	}
 
 	INIT_WORK(&als_data->wq, ld_lm3530_work_queue);
 
-	error = request_irq(als_data->client->irq, ld_lm3530_irq_handler,
-			    IRQF_TRIGGER_FALLING, LD_LM3530_NAME, als_data);
-	if (error != 0) {
-		pr_err("%s: irq request failed: %d\n", __func__, error);
-		error = -ENODEV;
-		goto err_req_irq_failed;
+	if (als_data->als_pdata->als_enabled == 1) {
+		error = request_irq(als_data->client->irq,
+			ld_lm3530_irq_handler,
+			IRQF_TRIGGER_FALLING,
+			LD_LM3530_NAME, als_data);
+		if (error != 0) {
+			pr_err("%s: irq request failed: %d\n", __func__, error);
+			error = -ENODEV;
+			goto err_req_irq_failed;
+		}
 	}
 
 	i2c_set_clientdata(client, als_data);
 
-	error = input_register_device(als_data->idev);
-	if (error) {
-		pr_err("%s: input device register failed:%d\n", __func__,
-		       error);
-		goto error_input_register_failed;
+	if (als_data->als_pdata->als_enabled == 1) {
+		error = input_register_device(als_data->idev);
+		if (error) {
+			pr_err("%s: input device register failed:%d\n",
+						__func__, error);
+			goto error_input_register_failed;
+		}
 	}
 
 	error = ld_lm3530_init_registers(als_data);
 	if (error < 0) {
 		pr_err("%s: Register Initialization failed: %d\n",
-		       __func__, error);
+			   __func__, error);
 		error = -ENODEV;
 		goto err_reg_init_failed;
 	}
@@ -620,13 +653,13 @@ static int ld_lm3530_probe(struct i2c_client *client,
 				 pdata->power_up_gen_config);
 	if (error) {
 		pr_err("%s:Initialize Gen Config Reg failed %d\n",
-		       __func__, error);
+			   __func__, error);
 		error = -ENODEV;
 		goto err_reg_init_failed;
 	}
 
 	error = led_classdev_register((struct device *)
-				      &client->dev, &als_data->led_dev);
+					  &client->dev, &als_data->led_dev);
 	if (error < 0) {
 		pr_err("%s: Register led class failed: %d\n", __func__, error);
 		error = -ENODEV;
@@ -660,8 +693,10 @@ static int ld_lm3530_probe(struct i2c_client *client,
 	als_data->early_suspend.resume = lm3530_late_resume;
 	register_early_suspend(&als_data->early_suspend);
 #endif
-	disable_irq(als_data->client->irq);
-	queue_work(als_data->working_queue, &als_data->wq);
+	if (als_data->als_pdata->als_enabled == 1) {
+		disable_irq(als_data->client->irq);
+		queue_work(als_data->working_queue, &als_data->wq);
+	}
 
 	return 0;
 
@@ -673,13 +708,19 @@ err_create_file_als_failed:
 	led_classdev_unregister(&als_data->led_dev);
 err_class_reg_failed:
 err_reg_init_failed:
-	input_unregister_device(als_data->idev);
+	if (als_data->als_pdata->als_enabled == 1) {
+		input_unregister_device(als_data->idev);
+		als_data->idev = NULL;
+	}
 error_input_register_failed:
-	free_irq(als_data->client->irq, als_data);
+	if (als_data->als_pdata->als_enabled == 1)
+		free_irq(als_data->client->irq, als_data);
 err_req_irq_failed:
-	destroy_workqueue(als_data->working_queue);
+	if (als_data->als_pdata->als_enabled == 1)
+		destroy_workqueue(als_data->working_queue);
 error_create_wq_failed:
-	input_free_device(als_data->idev);
+	if (als_data->als_pdata->als_enabled == 1)
+		input_free_device(als_data->idev);
 error_input_allocate_failed:
 error_invalid_current_select:
 	kfree(als_data);
@@ -704,17 +745,28 @@ static int ld_lm3530_remove(struct i2c_client *client)
 static int lm3530_suspend(struct i2c_client *client, pm_message_t mesg)
 {
 	struct lm3530_data *als_data = i2c_get_clientdata(client);
-	int ret;
-
 	if (lm3530_debug)
 		pr_info("%s: Suspending\n", __func__);
 
-	disable_irq(als_data->client->irq);
-	ret = cancel_work_sync(&als_data->wq);
-	if (ret) {
-		pr_info("%s: Not Suspending\n", __func__);
-		enable_irq(als_data->client->irq);
-		return -EBUSY;
+	if (als_data->als_pdata->gen_config & GEN_CONFIG_PWM_BIT) {
+		pwm_disable_auto = 1;
+		als_data->als_pdata->gen_config &= ~GEN_CONFIG_PWM_BIT;
+	}
+	if (als_data->als_pdata->manual_current & GEN_CONFIG_PWM_BIT) {
+		pwm_disable_manual = 1;
+		als_data->als_pdata->manual_current &= ~GEN_CONFIG_PWM_BIT;
+	}
+
+	if (als_data->als_pdata->als_enabled == 1) {
+		int ret;
+
+		disable_irq_nosync(als_data->client->irq);
+		ret = cancel_work_sync(&als_data->wq);
+		if (ret) {
+			pr_info("%s: Not Suspending\n", __func__);
+			enable_irq(als_data->client->irq);
+			return -EBUSY;
+		}
 	}
 
 	return 0;
@@ -727,10 +779,20 @@ static int lm3530_resume(struct i2c_client *client)
 	if (lm3530_debug)
 		pr_info("%s: Resuming\n", __func__);
 
-	/* Work around a HW issue that the HW will not generate an
-	interrupt when enabled */
-	queue_work(als_data->working_queue, &als_data->wq);
+	if (pwm_disable_auto) {
+		pwm_disable_auto = 0;
+		als_data->als_pdata->gen_config |= GEN_CONFIG_PWM_BIT;
+	}
+	if (pwm_disable_manual) {
+		pwm_disable_manual = 0;
+		als_data->als_pdata->manual_current |= GEN_CONFIG_PWM_BIT;
+	}
 
+	if (als_data->als_pdata->als_enabled == 1) {
+		/* Work around a HW issue that the HW will not generate an
+		interrupt when enabled */
+		queue_work(als_data->working_queue, &als_data->wq);
+	}
 	return 0;
 }
 
