@@ -21,4 +21,7 @@ MODULE_NAME = sec
 
 obj-$(CONFIG_SEC_DRIVER) += $(MODULE_NAME).o
 
+plus_sec := $(call as-instr,.arch_extension sec,+sec)
+AFLAGS_bridge_pub2sec.o := -Wa,-march=armv7-a$(plus_sec)
+
 $(MODULE_NAME)-objs := sec_core.o bridge_pub2sec.o

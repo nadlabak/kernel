@@ -1877,39 +1877,39 @@ static void dsi_vc_flush_long_data(int channel)
 
 static void dsi_show_rx_ack_with_err(u16 err)
 {
-	DSSERR("\tACK with ERROR (%#x):\n", err);
+	DSSDBG("\tACK with ERROR (%#x):\n", err);
 	if (err & (1 << 0))
-		DSSERR("\t\tSoT Error\n");
+		DSSDBG("\t\tSoT Error\n");
 	if (err & (1 << 1))
-		DSSERR("\t\tSoT Sync Error\n");
+		DSSDBG("\t\tSoT Sync Error\n");
 	if (err & (1 << 2))
-		DSSERR("\t\tEoT Sync Error\n");
+		DSSDBG("\t\tEoT Sync Error\n");
 	if (err & (1 << 3))
-		DSSERR("\t\tEscape Mode Entry Command Error\n");
+		DSSDBG("\t\tEscape Mode Entry Command Error\n");
 	if (err & (1 << 4))
-		DSSERR("\t\tLP Transmit Sync Error\n");
+		DSSDBG("\t\tLP Transmit Sync Error\n");
 	if (err & (1 << 5))
-		DSSERR("\t\tHS Receive Timeout Error\n");
+		DSSDBG("\t\tHS Receive Timeout Error\n");
 	if (err & (1 << 6))
-		DSSERR("\t\tFalse Control Error\n");
+		DSSDBG("\t\tFalse Control Error\n");
 	if (err & (1 << 7))
-		DSSERR("\t\t(reserved7)\n");
+		DSSDBG("\t\t(reserved7)\n");
 	if (err & (1 << 8))
-		DSSERR("\t\tECC Error, single-bit (corrected)\n");
+		DSSDBG("\t\tECC Error, single-bit (corrected)\n");
 	if (err & (1 << 9))
-		DSSERR("\t\tECC Error, multi-bit (not corrected)\n");
+		DSSDBG("\t\tECC Error, multi-bit (not corrected)\n");
 	if (err & (1 << 10))
-		DSSERR("\t\tChecksum Error\n");
+		DSSDBG("\t\tChecksum Error\n");
 	if (err & (1 << 11))
-		DSSERR("\t\tData type not recognized\n");
+		DSSDBG("\t\tData type not recognized\n");
 	if (err & (1 << 12))
-		DSSERR("\t\tInvalid VC ID\n");
+		DSSDBG("\t\tInvalid VC ID\n");
 	if (err & (1 << 13))
-		DSSERR("\t\tInvalid Transmission Length\n");
+		DSSDBG("\t\tInvalid Transmission Length\n");
 	if (err & (1 << 14))
-		DSSERR("\t\t(reserved14)\n");
+		DSSDBG("\t\t(reserved14)\n");
 	if (err & (1 << 15))
-		DSSERR("\t\tDSI Protocol Violation\n");
+		DSSDBG("\t\tDSI Protocol Violation\n");
 }
 
 static u16 dsi_vc_flush_receive_data(int channel)
@@ -1919,23 +1919,23 @@ static u16 dsi_vc_flush_receive_data(int channel)
 		u32 val;
 		u8 dt;
 		val = dsi_read_reg(DSI_VC_SHORT_PACKET_HEADER(channel));
-		DSSERR("\trawval %#08x\n", val);
+		DSSDBG("\trawval %#08x\n", val);
 		dt = FLD_GET(val, 5, 0);
 		if (dt == DSI_DT_RX_ACK_WITH_ERR) {
 			u16 err = FLD_GET(val, 23, 8);
 			dsi_show_rx_ack_with_err(err);
 		} else if (dt == DSI_DT_RX_SHORT_READ_1) {
-			DSSERR("\tDCS short response, 1 byte: %#x\n",
+			DSSDBG("\tDCS short response, 1 byte: %#x\n",
 					FLD_GET(val, 23, 8));
 		} else if (dt == DSI_DT_RX_SHORT_READ_2) {
-			DSSERR("\tDCS short response, 2 byte: %#x\n",
+			DSSDBG("\tDCS short response, 2 byte: %#x\n",
 					FLD_GET(val, 23, 8));
 		} else if (dt == DSI_DT_RX_DCS_LONG_READ) {
-			DSSERR("\tDCS long response, len %d\n",
+			DSSDBG("\tDCS long response, len %d\n",
 					FLD_GET(val, 23, 8));
 			dsi_vc_flush_long_data(channel);
 		} else {
-			DSSERR("\tunknown datatype 0x%02x\n", dt);
+			DSSDBG("\tunknown datatype 0x%02x\n", dt);
 		}
 	}
 	return 0;
@@ -1950,7 +1950,7 @@ static int dsi_vc_send_bta(int channel)
 	WARN_ON(!mutex_is_locked(&dsi.bus_lock));
 
 	if (REG_GET(DSI_VC_CTRL(channel), 20, 20)) {	/* RX_FIFO_NOT_EMPTY */
-		DSSERR("rx fifo not empty when sending BTA, dumping data:\n");
+		DSSDBG("rx fifo not empty when sending BTA, dumping data:\n");
 		dsi_vc_flush_receive_data(channel);
 	}
 
@@ -2229,7 +2229,7 @@ int dsi_vc_dcs_write(int channel, u8 *data, int len)
 	
 	/* RX_FIFO_NOT_EMPTY */
 	if (REG_GET(DSI_VC_CTRL(channel), 20, 20)) {
-		DSSERR("rx fifo not empty after write, dumping data:\n");
+		DSSDBG("rx fifo not empty after write, dumping data:\n");
 		dsi_vc_flush_receive_data(channel);
 		r = -EIO;
 		goto err;
