@@ -1005,6 +1005,8 @@ static int event_pending(void)
 		return 1;
 	else if (dev_mode_change->adb_mode_changed_flag)
 		return 1;
+	else if (dev_mode_change->tethering_mode_changed_flag)
+		return 1;
 	else if (dev_mode_change->usb_get_desc_flag)
 		return 1;
 	else if (dev_mode_change->pc_mode_switch_flag)
