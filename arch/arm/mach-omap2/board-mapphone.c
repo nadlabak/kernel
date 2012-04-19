@@ -184,6 +184,7 @@
 #define MAPPHONE_TOUCH_RESET_N_GPIO	164
 #define MAPPHONE_TOUCH_INT_GPIO		99
 #define MAPPHONE_LM_3530_INT_GPIO	92
+#define MAPPHONE_LM_3530_RESET_GPIO	93
 #define MAPPHONE_AKM8973_INT_GPIO	175
 #define MAPPHONE_AUDIO_PATH_GPIO	143
 #define MAPPHONE_BP_READY_AP_GPIO	141
@@ -1163,7 +1164,7 @@ static void __init mapphone_als_init(void)
 				 OMAP_GPIO_IRQ(lm3530_int_gpio);
 	}
 	lm3530_reset_gpio = get_gpio_by_name("lm3530_reset");
-	if (lm3530_int_gpio >= 0) {
+	if (lm3530_reset_gpio >= 0) {
 		gpio_request(lm3530_reset_gpio, "LED reset");
 		gpio_direction_output(lm3530_reset_gpio, 1);
 		msleep(10);
