@@ -77,6 +77,8 @@ static const char longname[] = "Gadget Android";
 #define MAPPHONE_PHONE_PORTAL_LITE_ADB_PRODUCT_ID      0x41ED
 #define MAPPHONE_MTP_PRODUCT_ID                        0x41D6
 #define MAPPHONE_MTP_ADB_PRODUCT_ID                    0x41DC
+#define MAPPHONE_CHARGE_ONLY_PRODUCT_ID                0x4287
+#define MAPPHONE_CHARGE_ADB_PRODUCT_ID                 0x428C
 #define MAPPHONE_ACM_PRODUCT_ID                        0x6422
 
 #define MAX_DEVICE_TYPE_NUM   20
@@ -99,6 +101,11 @@ static struct device_pid_vid mot_android_vid_pid[MAX_DEVICE_TYPE_NUM] =
 	{"msc", MSC_TYPE_FLAG, MAPPHONE_VENDOR_ID, MAPPHONE_PRODUCT_ID, 
 	"Motorola Config 14", USB_CLASS_PER_INTERFACE, USB_CLASS_PER_INTERFACE, USB_CLASS_PER_INTERFACE},
 	{"msc_adb", MSC_TYPE_FLAG | ADB_TYPE_FLAG, MAPPHONE_VENDOR_ID, MAPPHONE_ADB_PRODUCT_ID,
+	"Motorola Config 42", USB_CLASS_PER_INTERFACE, USB_CLASS_PER_INTERFACE, USB_CLASS_PER_INTERFACE},
+	
+	{"charge_only", MSC_TYPE_FLAG, MAPPHONE_VENDOR_ID, MAPPHONE_CHARGE_ONLY_PRODUCT_ID, 
+	"Motorola Config 14", USB_CLASS_PER_INTERFACE, USB_CLASS_PER_INTERFACE, USB_CLASS_PER_INTERFACE},
+	{"charge_adb", MSC_TYPE_FLAG | ADB_TYPE_FLAG, MAPPHONE_VENDOR_ID, MAPPHONE_CHARGE_ADB_PRODUCT_ID,
 	"Motorola Config 42", USB_CLASS_PER_INTERFACE, USB_CLASS_PER_INTERFACE, USB_CLASS_PER_INTERFACE},
 	
 	{"mtp", MTP_TYPE_FLAG, MAPPHONE_VENDOR_ID, MAPPHONE_MTP_PRODUCT_ID, 
@@ -556,7 +563,7 @@ static int enable_android_usb_product_function(char *device_name, int cnt)
 	{
 		list_for_each_entry(f, &android_config_driver.functions, list) 
 		{
-			if (!strcmp(f->name, "usb_mass_storage"))				
+			if (!strcmp(f->name, "usb_mass_storage"))
 				f->hidden = disable;
 			else
 				f->hidden = enable;
@@ -564,7 +571,7 @@ static int enable_android_usb_product_function(char *device_name, int cnt)
 		return 0;
 	}
 	
-	if (!strncmp(device_name, "msc_adb", cnt - 1) || !strncmp(device_name, "charge_only_adb", cnt - 1)) 
+	if (!strncmp(device_name, "msc_adb", cnt - 1) || !strncmp(device_name, "charge_adb", cnt - 1)) 
 	{
 		list_for_each_entry(f, &android_config_driver.functions, list) 
 		{
