@@ -135,14 +135,12 @@ static struct device_pid_vid mot_android_vid_pid[MAX_DEVICE_TYPE_NUM] =
 
 struct device_mode_change_dev {
 	int adb_mode_changed_flag;
-	int tethering_mode_changed_flag;
 	int pc_mode_switch_flag;
 	int usb_device_cfg_flag;
 	int usb_get_desc_flag;
 	int usb_data_transfer_flag;
 	wait_queue_head_t device_mode_change_wq;
 	wait_queue_head_t adb_cb_wq;
-	wait_queue_head_t tethering_cb_wq;
 	int g_device_type;
 	atomic_t device_mode_change_excl;
 };
@@ -162,7 +160,6 @@ struct android_dev {
 
 static struct android_dev *_android_dev;
 static struct device_mode_change_dev *_device_mode_change_dev;
-atomic_t tethering_enable_excl;
 
 /* string IDs are assigned dynamically */
 
@@ -395,30 +392,6 @@ void adb_mode_change_cb(void)
 	
 	dev_mode_change->adb_mode_changed_flag = 1;
 	wake_up_interruptible(&dev_mode_change->device_mode_change_wq);
-}
-
-void tethering_mode_change_cb(void)
-{
-	struct device_mode_change_dev *dev_mode_change =
-	    _device_mode_change_dev;
-	int ret;
-	
-	ret = wait_event_interruptible(dev_mode_change->tethering_cb_wq,
-		(!dev_mode_change->tethering_mode_changed_flag));
-	
-	if (ret < 0) 
-	{
-		printk(KERN_ERR "tethering_change_cb: %d\n", ret);
-		return;
-	}
-	
-	dev_mode_change->tethering_mode_changed_flag = 1;
-	wake_up_interruptible(&dev_mode_change->device_mode_change_wq);
-}
-
-int tethering_enable_access(void)
-{
-	return atomic_read(&tethering_enable_excl);
 }
 
 static int product_has_function(struct android_usb_product *p,
@@ -854,25 +827,11 @@ struct android_usb_product* get_best_product(const char* required_function)
 	return best;
 }
 
+/*
+ * This is disabled, use only the device change mode
+ */
 void android_enable_function(struct usb_function *f, int enable)
 {
-	struct android_dev *dev = _android_dev;
-	int disable = !enable;
-	int product_id;
-	char *func_name;
-	int func_name_len;
-	int adb_enable = 0;
-	
-	if (!!f->hidden != disable) {
-		if (!strcmp(f->name, "rndis")) {
-			if (enable)
-				atomic_set(&tethering_enable_excl, 1);
-			else
-				atomic_set(&tethering_enable_excl, 0);
-			tethering_mode_change_cb();
-			return;
-		}
-	}
 }
 
 /*
@@ -985,7 +944,7 @@ device_mode_change_write(struct file *file, const char __user * buffer,
 			__func__);
 		return -EFAULT;
 	}
-
+	
 	dev_mode_change->g_device_type = temp_device_type;
 	force_reenumeration(_android_dev, dev_mode_change->g_device_type);
 	printk(KERN_INFO "%s - Successfully enabled function - %s \n",
@@ -1039,8 +998,6 @@ static ssize_t device_mode_change_read(struct file *file, char *buf,
 	unsigned char no_changed[] = "none:\0";
 	unsigned char adb_en_str[] = "adb_enable:\0";
 	unsigned char adb_dis_str[] = "adb_disable:\0";
-	unsigned char tethering_en_str[] = "tethering_enable:\0";
-	unsigned char tethering_dis_str[] = "tethering_disable:\0";
 	unsigned char enumerated_str[] = "enumerated\0";
 	unsigned char get_desc_str[] = "get_desc\0";
 	unsigned char modswitch_str[50];
@@ -1090,24 +1047,6 @@ static ssize_t device_mode_change_read(struct file *file, char *buf,
 		}
 		dev_mode_change->adb_mode_changed_flag = 0;
 		wake_up_interruptible(&dev_mode_change->adb_cb_wq);
-	}
-	cnt += size;
-	buf += size;
-
-	/* append tethering status */
-	if (!dev_mode_change->tethering_mode_changed_flag) {
-		size = strlen(no_changed);
-		ret = copy_to_user(buf, no_changed, size);
-	} else {
-		if (tethering_enable_access()) {
-			size = strlen(tethering_en_str);
-			ret = copy_to_user(buf, tethering_en_str, size);
-		} else {
-			size = strlen(tethering_dis_str);
-			ret = copy_to_user(buf, tethering_dis_str, size);
-		}
-		dev_mode_change->tethering_mode_changed_flag = 0;
-		wake_up_interruptible(&dev_mode_change->tethering_cb_wq);
 	}
 	cnt += size;
 	buf += size;
@@ -1220,12 +1159,9 @@ static int __init init(void)
 	_device_mode_change_dev = dev_mode_change;
 	init_waitqueue_head(&dev_mode_change->device_mode_change_wq);
 	init_waitqueue_head(&dev_mode_change->adb_cb_wq);
-	init_waitqueue_head(&dev_mode_change->tethering_cb_wq);
 
 	dev_mode_change->adb_mode_changed_flag = 0;
-	dev_mode_change->tethering_mode_changed_flag = 0;
 	_registered_function_count = 0;
-	atomic_set(&tethering_enable_excl, 0);
 
 	ret = platform_driver_register(&android_platform_driver);
 	if (ret) {
