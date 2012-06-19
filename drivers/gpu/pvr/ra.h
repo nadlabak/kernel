@@ -1,6 +1,6 @@
 /**********************************************************************
  *
- * Copyright(c) 2008 Imagination Technologies Ltd. All rights reserved.
+ * Copyright (C) Imagination Technologies Ltd. All rights reserved.
  * 
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -89,6 +89,8 @@ RA_Create (IMG_CHAR *name,
                                 IMG_SIZE_T *pActualSize,
                                 BM_MAPPING **ppsMapping,
                                 IMG_UINT32 uFlags,
+								IMG_PVOID pvPrivData,
+								IMG_UINT32 ui32PrivDataLength,
                                 IMG_UINTPTR_T *pBase),
            IMG_VOID (*imp_free) (IMG_VOID *,
                                 IMG_UINTPTR_T,
@@ -116,6 +118,8 @@ RA_Alloc (RA_ARENA *pArena,
           IMG_UINT32 uFlags,
           IMG_UINT32 uAlignment,
 		  IMG_UINT32 uAlignmentOffset,
+		  IMG_PVOID pvPrivData,
+		  IMG_UINT32 ui32PrivDataLength,
           IMG_UINTPTR_T *pBase);
 
 IMG_VOID 
@@ -126,18 +130,18 @@ RA_Free (RA_ARENA *pArena, IMG_UINTPTR_T base, IMG_BOOL bFreeBackingStore);
 
 #define CHECK_SPACE(total)					\
 {											\
-	if(total<100) 							\
+	if((total)<100) 							\
 		return PVRSRV_ERROR_INVALID_PARAMS;	\
 }
 
 #define UPDATE_SPACE(str, count, total)		\
 {											\
-	if(count == -1)					 		\
+	if((count) == -1)					 		\
 		return PVRSRV_ERROR_INVALID_PARAMS;	\
 	else									\
 	{										\
-		str += count;						\
-		total -= count;						\
+		(str) += (count);						\
+		(total) -= (count);						\
 	}										\
 }
 
@@ -148,6 +152,10 @@ IMG_BOOL RA_GetNextLiveSegment(IMG_HANDLE hArena, RA_SEGMENT_DETAILS *psSegDetai
 PVRSRV_ERROR RA_GetStats(RA_ARENA *pArena,
 							IMG_CHAR **ppszStr, 
 							IMG_UINT32 *pui32StrLen);
+
+PVRSRV_ERROR RA_GetStatsFreeMem(RA_ARENA *pArena,
+								IMG_CHAR **ppszStr, 
+								IMG_UINT32 *pui32StrLen);
 
 #endif 
 

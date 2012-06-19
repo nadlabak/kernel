@@ -1,6 +1,6 @@
 /**********************************************************************
  *
- * Copyright(c) 2008 Imagination Technologies Ltd. All rights reserved.
+ * Copyright (C) Imagination Technologies Ltd. All rights reserved.
  * 
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -26,6 +26,10 @@
 
 #if !defined (__KERNELDISPLAY_H__)
 #define __KERNELDISPLAY_H__
+
+#if defined (__cplusplus)
+extern "C" {
+#endif
 
 typedef PVRSRV_ERROR (*PFN_OPEN_DC_DEVICE)(IMG_UINT32, IMG_HANDLE*, PVRSRV_SYNC_DATA*);
 typedef PVRSRV_ERROR (*PFN_CLOSE_DC_DEVICE)(IMG_HANDLE);
@@ -62,6 +66,7 @@ typedef PVRSRV_ERROR (*PFN_SWAP_TO_DC_BUFFER)(IMG_HANDLE,
 											  IMG_UINT32,
 											  IMG_RECT*);
 typedef PVRSRV_ERROR (*PFN_SWAP_TO_DC_SYSTEM)(IMG_HANDLE, IMG_HANDLE);
+typedef IMG_VOID (*PFN_QUERY_SWAP_COMMAND_ID)(IMG_HANDLE, IMG_HANDLE, IMG_HANDLE, IMG_HANDLE, IMG_UINT16*, IMG_BOOL*);
 typedef IMG_VOID (*PFN_SET_DC_STATE)(IMG_HANDLE, IMG_UINT32);
 
 typedef struct PVRSRV_DC_SRV2DISP_KMJTABLE_TAG
@@ -84,6 +89,7 @@ typedef struct PVRSRV_DC_SRV2DISP_KMJTABLE_TAG
 	PFN_SWAP_TO_DC_BUFFER			pfnSwapToDCBuffer;
 	PFN_SWAP_TO_DC_SYSTEM			pfnSwapToDCSystem;
 	PFN_SET_DC_STATE				pfnSetDCState;
+	PFN_QUERY_SWAP_COMMAND_ID		pfnQuerySwapCommandID;
 
 } PVRSRV_DC_SRV2DISP_KMJTABLE;
 
@@ -100,6 +106,13 @@ typedef PVRSRV_ERROR (*PFN_DC_REGISTER_POWER)(IMG_UINT32, PFN_PRE_POWER, PFN_POS
 											  PFN_PRE_CLOCKSPEED_CHANGE, PFN_POST_CLOCKSPEED_CHANGE,
 											  IMG_HANDLE, PVRSRV_DEV_POWER_STATE, PVRSRV_DEV_POWER_STATE);
 
+typedef struct _PVRSRV_KERNEL_MEM_INFO_* PDC_MEM_INFO;
+
+typedef PVRSRV_ERROR (*PFN_DC_MEMINFO_GET_CPU_VADDR)(PDC_MEM_INFO, IMG_CPU_VIRTADDR *pVAddr);
+typedef PVRSRV_ERROR (*PFN_DC_MEMINFO_GET_CPU_PADDR)(PDC_MEM_INFO, IMG_SIZE_T uByteOffset, IMG_CPU_PHYADDR *pPAddr);
+typedef PVRSRV_ERROR (*PFN_DC_MEMINFO_GET_BYTE_SIZE)(PDC_MEM_INFO, IMG_SIZE_T *uByteSize);
+typedef IMG_BOOL (*PFN_DC_MEMINFO_IS_PHYS_CONTIG)(PDC_MEM_INFO);
+
 typedef struct PVRSRV_DC_DISP2SRV_KMJTABLE_TAG
 {
 	IMG_UINT32						ui32TableSize;
@@ -111,6 +124,12 @@ typedef struct PVRSRV_DC_DISP2SRV_KMJTABLE_TAG
 	PFN_DC_CMD_COMPLETE				pfnPVRSRVCmdComplete;
 	PFN_DC_REGISTER_SYS_ISR			pfnPVRSRVRegisterSystemISRHandler;
 	PFN_DC_REGISTER_POWER			pfnPVRSRVRegisterPowerDevice;
+	PFN_DC_CMD_COMPLETE				pfnPVRSRVFreeCmdCompletePacket;
+	PFN_DC_MEMINFO_GET_CPU_VADDR	pfnPVRSRVDCMemInfoGetCpuVAddr;
+	PFN_DC_MEMINFO_GET_CPU_PADDR	pfnPVRSRVDCMemInfoGetCpuPAddr;
+	PFN_DC_MEMINFO_GET_BYTE_SIZE	pfnPVRSRVDCMemInfoGetByteSize;
+	PFN_DC_MEMINFO_IS_PHYS_CONTIG	pfnPVRSRVDCMemInfoIsPhysContig;
+
 } PVRSRV_DC_DISP2SRV_KMJTABLE, *PPVRSRV_DC_DISP2SRV_KMJTABLE;
 
 
@@ -139,6 +158,35 @@ typedef struct DISPLAYCLASS_FLIP_COMMAND_TAG
 
 } DISPLAYCLASS_FLIP_COMMAND;
 
+
+typedef struct DISPLAYCLASS_FLIP_COMMAND2_TAG
+{
+	
+	IMG_HANDLE hExtDevice;
+
+	
+	IMG_HANDLE hExtSwapChain;
+
+	
+	IMG_HANDLE hUnused;
+
+	
+	IMG_UINT32 ui32SwapInterval;
+
+	
+	IMG_PVOID  pvPrivData;
+
+	
+	IMG_UINT32 ui32PrivDataLength;
+
+	
+	PDC_MEM_INFO *ppsMemInfos;
+
+	
+	IMG_UINT32 ui32NumMemInfos;
+
+} DISPLAYCLASS_FLIP_COMMAND2;
+
 #define DC_FLIP_COMMAND		0
 
 #define DC_STATE_NO_FLUSH_COMMANDS		0
@@ -147,7 +195,12 @@ typedef struct DISPLAYCLASS_FLIP_COMMAND_TAG
 
 typedef IMG_BOOL (*PFN_DC_GET_PVRJTABLE)(PPVRSRV_DC_DISP2SRV_KMJTABLE);
 
+IMG_IMPORT IMG_BOOL PVRGetDisplayClassJTable(PVRSRV_DC_DISP2SRV_KMJTABLE *psJTable);
 
+
+#if defined (__cplusplus)
+}
+#endif
 
 #endif
 

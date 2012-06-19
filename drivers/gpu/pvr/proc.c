@@ -1,6 +1,6 @@
 /**********************************************************************
  *
- * Copyright(c) 2008 Imagination Technologies Ltd. All rights reserved.
+ * Copyright (C) Imagination Technologies Ltd. All rights reserved.
  * 
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -24,13 +24,16 @@
  *
  ******************************************************************************/
 
+#include <linux/version.h>
+
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(2,6,38))
 #ifndef AUTOCONF_INCLUDED
- #include <linux/config.h>
+#include <linux/config.h>
+#endif
 #endif
 
 #include <linux/init.h>
 #include <linux/module.h>
-#include <linux/version.h>
 #include <linux/fs.h>
 #include <linux/proc_fs.h>
 #include <linux/seq_file.h>
@@ -48,23 +51,11 @@
 #include "linkage.h"
 
 #include "lists.h"
-DECLARE_LIST_ANY_VA(PVRSRV_DEVICE_NODE);
-
 
 static struct proc_dir_entry * dir;
 
-#ifndef PVR_PROC_USE_SEQ_FILE
-static off_t procDumpSysNodes(IMG_CHAR *buf, size_t size, off_t off);
-static off_t procDumpVersion(IMG_CHAR *buf, size_t size, off_t off);
-#endif 
-
-
 static const IMG_CHAR PVRProcDirRoot[] = "pvr";
 
-
-#ifdef PVR_PROC_USE_SEQ_FILE
-
-#define PVR_PROC_SEQ_START_TOKEN (void*)1
 static IMG_INT pvr_proc_open(struct inode *inode,struct file *file);
 static void *pvr_proc_seq_start (struct seq_file *m, loff_t *pos);
 static void pvr_proc_seq_stop (struct seq_file *m, void *v);
@@ -107,15 +98,11 @@ static void ProcSeqShowVersion(struct seq_file *sfile,void* el);
 static void ProcSeqShowSysNodes(struct seq_file *sfile,void* el);
 static void* ProcSeqOff2ElementSysNodes(struct seq_file * sfile, loff_t off);
 
-#endif
-
 off_t printAppend(IMG_CHAR * buffer, size_t size, off_t off, const IMG_CHAR * format, ...)
 {
     IMG_INT n;
     size_t space = size - (size_t)off;
     va_list ap;
-
-    PVR_ASSERT(space >= 0);
 
     va_start (ap, format);
 
@@ -136,10 +123,9 @@ off_t printAppend(IMG_CHAR * buffer, size_t size, off_t off, const IMG_CHAR * fo
 }
 
 
-#ifdef PVR_PROC_USE_SEQ_FILE
-
 void* ProcSeq1ElementOff2Element(struct seq_file *sfile, loff_t off)
 {
+	PVR_UNREFERENCED_PARAMETER(sfile);
 	
 	if(!off)
 		return (void*)2;
@@ -149,6 +135,8 @@ void* ProcSeq1ElementOff2Element(struct seq_file *sfile, loff_t off)
 
 void* ProcSeq1ElementHeaderOff2Element(struct seq_file *sfile, loff_t off)
 {
+	PVR_UNREFERENCED_PARAMETER(sfile);
+
 	if(!off)
 	{
 		return PVR_PROC_SEQ_START_TOKEN;
@@ -180,6 +168,7 @@ static ssize_t pvr_proc_write(struct file *file, const char __user *buffer,
 	struct inode *inode = file->f_path.dentry->d_inode;
 	struct proc_dir_entry * dp;
 
+	PVR_UNREFERENCED_PARAMETER(ppos);
 	dp = PDE(inode);
 
 	if (!dp->write_proc)
@@ -200,6 +189,8 @@ static void *pvr_proc_seq_start (struct seq_file *proc_seq_file, loff_t *pos)
 static void pvr_proc_seq_stop (struct seq_file *proc_seq_file, void *v)
 {
 	PVR_PROC_SEQ_HANDLERS *handlers = (PVR_PROC_SEQ_HANDLERS*)proc_seq_file->private;
+	PVR_UNREFERENCED_PARAMETER(v);
+
 	if(handlers->startstop != NULL)
 		handlers->startstop(proc_seq_file, IMG_FALSE);
 }
@@ -284,7 +275,7 @@ static struct proc_dir_entry* CreateProcEntryInDirSeq(
     }
 
     PVR_DPF((PVR_DBG_ERROR, "CreateProcEntryInDirSeq: cannot make proc entry /proc/%s/%s: no memory", PVRProcDirRoot, name));
-    return 0;
+    return NULL;
 }
 
 
@@ -324,7 +315,7 @@ struct proc_dir_entry* CreateProcEntrySeq (
 								   show_handler,
 								   off2element_handler,
 								   startstop_handler,
-								   NULL
+								   whandler
 								  );
 }
 
@@ -364,7 +355,7 @@ struct proc_dir_entry* CreatePerProcessProcEntrySeq (
         IMG_CHAR dirname[16];
         IMG_INT ret;
 
-        ret = snprintf(dirname, sizeof(dirname), "%lu", ui32PID);
+        ret = snprintf(dirname, sizeof(dirname), "%u", ui32PID);
 
 		if (ret <=0 || ret >= (IMG_INT)sizeof(dirname))
 		{
@@ -429,11 +420,10 @@ IMG_VOID RemovePerProcessProcEntrySeq(struct proc_dir_entry* proc_entry)
     }
 }
 
-#endif 
-
 static IMG_INT pvr_read_proc(IMG_CHAR *page, IMG_CHAR **start, off_t off,
                          IMG_INT count, IMG_INT *eof, IMG_VOID *data)
 {
+	 
     pvr_read_proc_t *pprn = (pvr_read_proc_t *)data;
 
     off_t len = pprn (page, (size_t)count, off);
@@ -535,7 +525,7 @@ IMG_INT CreatePerProcessProcEntry(const IMG_CHAR * name, read_proc_t rhandler, w
         IMG_CHAR dirname[16];
         IMG_INT ret;
 
-        ret = snprintf(dirname, sizeof(dirname), "%lu", ui32PID);
+        ret = snprintf(dirname, sizeof(dirname), "%u", ui32PID);
 
 		if (ret <=0 || ret >= (IMG_INT)sizeof(dirname))
 		{
@@ -570,6 +560,7 @@ IMG_INT CreateProcReadEntry(const IMG_CHAR * name, pvr_read_proc_t handler)
         return -ENOMEM;
     }
 
+	 
     file = create_proc_read_entry (name, S_IFREG | S_IRUGO, dir, pvr_read_proc, (IMG_VOID *)handler);
 
     if (file)
@@ -597,17 +588,11 @@ IMG_INT CreateProcEntries(IMG_VOID)
         return -ENOMEM;
     }
 
-#ifdef PVR_PROC_USE_SEQ_FILE
 	g_pProcQueue = CreateProcReadEntrySeq("queue", NULL, NULL, ProcSeqShowQueue, ProcSeqOff2ElementQueue, NULL);
 	g_pProcVersion = CreateProcReadEntrySeq("version", NULL, NULL, ProcSeqShowVersion, ProcSeq1ElementHeaderOff2Element, NULL);
 	g_pProcSysNodes = CreateProcReadEntrySeq("nodes", NULL, NULL, ProcSeqShowSysNodes, ProcSeqOff2ElementSysNodes, NULL);
 
 	if(!g_pProcQueue || !g_pProcVersion || !g_pProcSysNodes)
-#else 
-    if (CreateProcReadEntry("queue", QueuePrintQueues) ||
-		CreateProcReadEntry("version", procDumpVersion) ||
-		CreateProcReadEntry("nodes", procDumpSysNodes))
-#endif 
     {
         PVR_DPF((PVR_DBG_ERROR, "CreateProcEntries: couldn't make /proc/%s files", PVRProcDirRoot));
 
@@ -617,15 +602,11 @@ IMG_INT CreateProcEntries(IMG_VOID)
 
 #ifdef DEBUG
 
-#ifdef PVR_PROC_USE_SEQ_FILE
 	g_pProcDebugLevel = CreateProcEntrySeq("debug_level", NULL, NULL,
 											ProcSeqShowDebugLevel,
 											ProcSeq1ElementOff2Element, NULL,
-										    PVRDebugProcSetLevel);
+										    (IMG_VOID*)PVRDebugProcSetLevel);
 	if(!g_pProcDebugLevel)
-#else 
-	if (CreateProcEntry ("debug_level", PVRDebugProcGetLevel, PVRDebugProcSetLevel, 0))
-#endif 
     {
         PVR_DPF((PVR_DBG_ERROR, "CreateProcEntries: couldn't make /proc/%s/debug_level", PVRProcDirRoot));
 
@@ -633,15 +614,11 @@ IMG_INT CreateProcEntries(IMG_VOID)
     }
 
 #ifdef PVR_MANUAL_POWER_CONTROL
-#ifdef PVR_PROC_USE_SEQ_FILE
 	g_pProcPowerLevel = CreateProcEntrySeq("power_control", NULL, NULL,
 											ProcSeqShowPowerLevel,
 											ProcSeq1ElementOff2Element, NULL,
 										    PVRProcSetPowerLevel);
 	if(!g_pProcPowerLevel)
-#else 
-	if (CreateProcEntry("power_control", PVRProcGetPowerLevel, PVRProcSetPowerLevel, 0))
-#endif
     {
         PVR_DPF((PVR_DBG_ERROR, "CreateProcEntries: couldn't make /proc/%s/power_control", PVRProcDirRoot));
 
@@ -706,111 +683,48 @@ IMG_VOID RemovePerProcessProcDir(PVRSRV_ENV_PER_PROCESS_DATA *psPerProc)
 IMG_VOID RemoveProcEntries(IMG_VOID)
 {
 #ifdef DEBUG
-
-#ifdef PVR_PROC_USE_SEQ_FILE
-    RemoveProcEntrySeq( g_pProcDebugLevel );
-#else 
-    RemoveProcEntry("debug_level");
-#endif 
-
+	RemoveProcEntrySeq( g_pProcDebugLevel );
 #ifdef PVR_MANUAL_POWER_CONTROL
-#ifdef PVR_PROC_USE_SEQ_FILE
-    RemoveProcEntrySeq( g_pProcPowerLevel );
-#else 
-    RemoveProcEntry("power_control");
+	RemoveProcEntrySeq( g_pProcPowerLevel );
 #endif 
-#endif 
+#endif
 
-#endif 
-
-#ifdef PVR_PROC_USE_SEQ_FILE
-    RemoveProcEntrySeq(g_pProcQueue);
-    RemoveProcEntrySeq(g_pProcVersion);
+	RemoveProcEntrySeq(g_pProcQueue);
+	RemoveProcEntrySeq(g_pProcVersion);
 	RemoveProcEntrySeq(g_pProcSysNodes);
-#else 
-    RemoveProcEntry("queue");
-    RemoveProcEntry("version");
-    RemoveProcEntry("nodes");
-#endif 
 
-    while (dir->subdir)
-    {
-	PVR_DPF((PVR_DBG_WARNING, "Belatedly removing /proc/%s/%s", PVRProcDirRoot, dir->subdir->name));
+	while (dir->subdir)
+	{
+		PVR_DPF((PVR_DBG_WARNING, "Belatedly removing /proc/%s/%s", PVRProcDirRoot, dir->subdir->name));
 
-	RemoveProcEntry(dir->subdir->name);
-    }
+		RemoveProcEntry(dir->subdir->name);
+	}
 
-    remove_proc_entry(PVRProcDirRoot, NULL);
+	remove_proc_entry(PVRProcDirRoot, NULL);
 }
-
-
-#ifdef PVR_PROC_USE_SEQ_FILE
 
 static void ProcSeqShowVersion(struct seq_file *sfile,void* el)
 {
-	SYS_DATA * psSysData;
+	SYS_DATA *psSysData;
 	IMG_CHAR *pszSystemVersionString = "None";
 
 	if(el == PVR_PROC_SEQ_START_TOKEN)
 	{
-		seq_printf( sfile,
-						"Version %s (%s) %s\n",
-						PVRVERSION_STRING,
-						PVR_BUILD_TYPE, PVR_BUILD_DIR);
+		seq_printf(sfile,
+				"Version %s (%s) %s\n",
+				PVRVERSION_STRING,
+				PVR_BUILD_TYPE, PVR_BUILD_DIR);
 		return;
 	}
 
-    SysAcquireData(&psSysData);
-
-    if(psSysData->pszVersionString)
+	psSysData = SysAcquireDataNoCheck();
+	if(psSysData != IMG_NULL && psSysData->pszVersionString != IMG_NULL)
 	{
-    	pszSystemVersionString = psSysData->pszVersionString;
-    }
+		pszSystemVersionString = psSysData->pszVersionString;
+	}
 
 	seq_printf( sfile, "System Version String: %s\n", pszSystemVersionString);
 }
-
-#else
-
-static off_t procDumpVersion(IMG_CHAR *buf, size_t size, off_t off)
-{
-    SYS_DATA *psSysData;
-
-    if (off == 0)
-    {
-	return printAppend(buf, size, 0,
-						"Version %s (%s) %s\n",
-						PVRVERSION_STRING,
-						PVR_BUILD_TYPE, PVR_BUILD_DIR);
-    }
-
-    SysAcquireData(&psSysData)
-
-    if (off == 1)
-    {
-        IMG_CHAR *pszSystemVersionString = "None";
-
-        if(psSysData->pszVersionString)
-        {
-            pszSystemVersionString = psSysData->pszVersionString;
-        }
-
-        if(strlen(pszSystemVersionString)
-            + strlen("System Version String: \n")
-            + 1 > size)
-        {
-            return 0;
-        }
-        return printAppend(buf, size, 0,
-                            "System Version String: %s\n",
-                            pszSystemVersionString);
-    }
-
-    return END_OF_FILE;
-}
-
-#endif 
-
 
 static const IMG_CHAR *deviceTypeToString(PVRSRV_DEVICE_TYPE deviceType)
 {
@@ -854,7 +768,7 @@ static const IMG_CHAR *deviceClassToString(PVRSRV_DEVICE_CLASS deviceClass)
     }
 }
 
-IMG_VOID* DecOffPsDev_AnyVaCb(PVRSRV_DEVICE_NODE *psNode, va_list va)
+static IMG_VOID* DecOffPsDev_AnyVaCb(PVRSRV_DEVICE_NODE *psNode, va_list va)
 {
 	off_t *pOff = va_arg(va, off_t*);
 	if (--(*pOff))
@@ -867,12 +781,9 @@ IMG_VOID* DecOffPsDev_AnyVaCb(PVRSRV_DEVICE_NODE *psNode, va_list va)
 	}
 }
 
-#ifdef PVR_PROC_USE_SEQ_FILE
-
 static void ProcSeqShowSysNodes(struct seq_file *sfile,void* el)
 {
-	SYS_DATA * psSysData;
-    PVRSRV_DEVICE_NODE	*psDevNode = (PVRSRV_DEVICE_NODE*)el;
+	PVRSRV_DEVICE_NODE *psDevNode;
 
 	if(el == PVR_PROC_SEQ_START_TOKEN)
 	{
@@ -882,89 +793,43 @@ static void ProcSeqShowSysNodes(struct seq_file *sfile,void* el)
 		return;
 	}
 
-    SysAcquireData(&psSysData);
+	psDevNode = (PVRSRV_DEVICE_NODE*)el;
 
 	seq_printf( sfile,
-				  "%p %-8s %-8s %4d  %2lu  %p  %3lu  %p\n",
-				  psDevNode,
-				  deviceTypeToString(psDevNode->sDevId.eDeviceType),
-				  deviceClassToString(psDevNode->sDevId.eDeviceClass),
-				  psDevNode->sDevId.eDeviceClass,
-				  psDevNode->ui32RefCount,
-				  psDevNode->pvDevice,
-				  psDevNode->ui32pvDeviceSize,
-				  psDevNode->hResManContext);
-
+			  "%p %-8s %-8s %4d  %2u  %p  %3u  %p\n",
+			  psDevNode,
+			  deviceTypeToString(psDevNode->sDevId.eDeviceType),
+			  deviceClassToString(psDevNode->sDevId.eDeviceClass),
+			  psDevNode->sDevId.eDeviceClass,
+			  psDevNode->ui32RefCount,
+			  psDevNode->pvDevice,
+			  psDevNode->ui32pvDeviceSize,
+			  psDevNode->hResManContext);
 }
 
 static void* ProcSeqOff2ElementSysNodes(struct seq_file * sfile, loff_t off)
 {
     SYS_DATA *psSysData;
-    PVRSRV_DEVICE_NODE	*psDevNode;
-	if(!off)
-	{
-		return PVR_PROC_SEQ_START_TOKEN;
-	}
-
-    SysAcquireData(&psSysData);
-
+    PVRSRV_DEVICE_NODE*psDevNode = IMG_NULL;
     
-	psDevNode = (PVRSRV_DEVICE_NODE*)
-				List_PVRSRV_DEVICE_NODE_Any_va(psSysData->psDeviceNodeList,
-													DecOffPsDev_AnyVaCb,
-													&off);
+    PVR_UNREFERENCED_PARAMETER(sfile);
+    
+    if(!off)
+    {
+	return PVR_PROC_SEQ_START_TOKEN;
+    }
 
+    psSysData = SysAcquireDataNoCheck();
+    if (psSysData != IMG_NULL)
+    {
 	
-	return (void*)psDevNode;
-}
-
-#else 
-
-static
-off_t procDumpSysNodes(IMG_CHAR *buf, size_t size, off_t off)
-{
-    SYS_DATA 			*psSysData;
-    PVRSRV_DEVICE_NODE	*psDevNode;
-    off_t				len;
-
-    
-    if (size < 80)
-    {
-		return 0;
-    }
-
-    if (off == 0)
-    {
-		return printAppend(buf, size, 0,
-						"Registered nodes\n"
-						"Addr     Type     Class    Index Ref pvDev     Size Res\n");
-    }
-
-    SysAcquireData(&psSysData);
-
-    
 	psDevNode = (PVRSRV_DEVICE_NODE*)
-				List_PVRSRV_DEVICE_NODE_Any_va(psSysData->psDeviceNodeList,
+			List_PVRSRV_DEVICE_NODE_Any_va(psSysData->psDeviceNodeList,
 													DecOffPsDev_AnyVaCb,
 													&off);
-
-    if (!psDevNode)
-    {
-		return END_OF_FILE;
     }
 
-    len = printAppend(buf, size, 0,
-				  "%p %-8s %-8s %4d  %2lu  %p  %3lu  %p\n",
-				  psDevNode,
-				  deviceTypeToString(psDevNode->sDevId.eDeviceType),
-				  deviceClassToString(psDevNode->sDevId.eDeviceClass),
-				  psDevNode->sDevId.eDeviceClass,
-				  psDevNode->ui32RefCount,
-				  psDevNode->pvDevice,
-				  psDevNode->ui32pvDeviceSize,
-				  psDevNode->hResManContext);
-    return (len);
+    
+    return (void*)psDevNode;
 }
-
-#endif 
 

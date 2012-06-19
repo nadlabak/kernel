@@ -1,6 +1,6 @@
 /**********************************************************************
  *
- * Copyright(c) 2008 Imagination Technologies Ltd. All rights reserved.
+ * Copyright (C) Imagination Technologies Ltd. All rights reserved.
  * 
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -27,34 +27,47 @@
 #if !defined(__SOCCONFIG_H__)
 #define __SOCCONFIG_H__
 
-#include "syscommon.h"
-
 #define VS_PRODUCT_NAME	"OMAP3"
 
-#define SYS_SGX_CLOCK_SPEED_3630    200000000 /* Core Clk/2 */
-#define SYS_SGX_CLOCK_SPEED_3430    110666666 /* Core Clk/3 */
+#if defined(SGX530) && (SGX_CORE_REV == 125)
+#define SYS_SGX_CLOCK_SPEED		200000000
+#else
+#define SYS_SGX_CLOCK_SPEED		110666666
+#endif
 
 #define SYS_SGX_HWRECOVERY_TIMEOUT_FREQ		(100)	
 #define SYS_SGX_PDS_TIMER_FREQ				(1000)	
 
 #if !defined(SYS_SGX_ACTIVE_POWER_LATENCY_MS)
-#define SYS_SGX_ACTIVE_POWER_LATENCY_MS		(1)
+#define SYS_SGX_ACTIVE_POWER_LATENCY_MS		(2)
 #endif
 
 
-#define SYS_OMAP3430_SGX_REGS_SYS_PHYS_BASE  0x50000000
+#define SYS_OMAP3_SGX_REGS_SYS_PHYS_BASE  0x50000000
 
 #if defined(SGX530) && (SGX_CORE_REV == 125)
-#define SYS_OMAP3430_SGX_REGS_SIZE           0x10000
+#define SYS_OMAP3_SGX_REGS_SIZE           0x10000
 #else
-#define SYS_OMAP3430_SGX_REGS_SIZE           0x4000
+#define SYS_OMAP3_SGX_REGS_SIZE           0x4000
 #endif
 
-#define SYS_OMAP3430_SGX_IRQ				 21
+#define SYS_OMAP3_SGX_IRQ				 21 
 
-#define SYS_OMAP3430_GP11TIMER_ENABLE_SYS_PHYS_BASE  0x48088024
-#define SYS_OMAP3430_GP11TIMER_REGS_SYS_PHYS_BASE	 0x48088028
-#define SYS_OMAP3430_GP11TIMER_TSICR_SYS_PHYS_BASE	 0x48088040
+#define SYS_OMAP3_GPTIMER_ENABLE_SYS_PHYS_BASE  0x48088024
+#define SYS_OMAP3_GPTIMER_REGS_SYS_PHYS_BASE	 0x48088028
+#define SYS_OMAP3_GPTIMER_TSICR_SYS_PHYS_BASE	 0x48088040
+
+#define DEVICE_SGX_INTERRUPT		(1<<0)
+#define DEVICE_MSVDX_INTERRUPT		(1<<1)
+#define DEVICE_DISP_INTERRUPT		(1<<2)
+
+#if defined(__linux__)
+#if defined(PVR_LDM_PLATFORM_PRE_REGISTERED_DEV)
+#define	SYS_SGX_DEV_NAME	PVR_LDM_PLATFORM_PRE_REGISTERED_DEV
+#else
+#define	SYS_SGX_DEV_NAME	"omap_gpu"
+#endif	
+#endif	
 
  
 #endif	

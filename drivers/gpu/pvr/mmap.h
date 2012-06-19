@@ -1,6 +1,6 @@
 /**********************************************************************
  *
- * Copyright(c) 2008 Imagination Technologies Ltd. All rights reserved.
+ * Copyright (C) Imagination Technologies Ltd. All rights reserved.
  * 
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -30,6 +30,10 @@
 #include <linux/mm.h>
 #include <linux/list.h>
 
+#if defined(VM_MIXEDMAP)
+#define	PVR_MAKE_ALL_PFNS_SPECIAL
+#endif
+
 #include "perproc.h"
 #include "mm.h"
 
@@ -46,8 +50,10 @@ typedef struct KV_OFFSET_STRUCT_TAG
     
     LinuxMemArea                *psLinuxMemArea;
     
+#if !defined(PVR_MAKE_ALL_PFNS_SPECIAL)
     
     IMG_UINT32			ui32TID;
+#endif
 
     
     IMG_UINT32			ui32PID;
@@ -88,14 +94,23 @@ PVRSRV_ERROR PVRMMapRemoveRegisteredArea(LinuxMemArea *psLinuxMemArea);
 
 
 PVRSRV_ERROR PVRMMapOSMemHandleToMMapData(PVRSRV_PER_PROCESS_DATA *psPerProc,
-					     IMG_HANDLE hMHandle,
-                                             IMG_UINT32 *pui32MMapOffset,
-                                             IMG_UINT32 *pui32ByteOffset,
-                                             IMG_UINT32 *pui32RealByteSize,						     IMG_UINT32 *pui32UserVAddr);
+#if defined (SUPPORT_SID_INTERFACE)
+                                          IMG_SID     hMHandle,
+#else
+                                          IMG_HANDLE hMHandle,
+#endif
+                                          IMG_UINT32 *pui32MMapOffset,
+                                          IMG_UINT32 *pui32ByteOffset,
+                                          IMG_UINT32 *pui32RealByteSize,
+                                          IMG_UINT32 *pui32UserVAddr);
 
 PVRSRV_ERROR
 PVRMMapReleaseMMapData(PVRSRV_PER_PROCESS_DATA *psPerProc,
+#if defined (SUPPORT_SID_INTERFACE)
+				IMG_SID   hMHandle,
+#else
 				IMG_HANDLE hMHandle,
+#endif
 				IMG_BOOL *pbMUnmap,
 				IMG_UINT32 *pui32RealByteSize,
                                 IMG_UINT32 *pui32UserVAddr);

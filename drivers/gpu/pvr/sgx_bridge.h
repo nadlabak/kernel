@@ -1,6 +1,6 @@
 /**********************************************************************
  *
- * Copyright(c) 2008 Imagination Technologies Ltd. All rights reserved.
+ * Copyright (C) Imagination Technologies Ltd. All rights reserved.
  * 
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -27,7 +27,11 @@
 #if !defined(__SGX_BRIDGE_H__)
 #define __SGX_BRIDGE_H__
 
+#if defined (SUPPORT_SID_INTERFACE)
+#include "sgxapi.h"
+#else
 #include "sgxapi_km.h"
+#endif
 #include "sgxinfo.h"
 #include "pvr_bridge.h"
 
@@ -71,10 +75,7 @@ extern "C" {
 
 #define PVRSRV_BRIDGE_SGX_SCHEDULE_PROCESS_QUEUES		PVRSRV_IOWR(PVRSRV_BRIDGE_SGX_CMD_BASE+28)
 
-#if defined(SUPPORT_SGX_HWPERF)
-#define PVRSRV_BRIDGE_SGX_READ_DIFF_COUNTERS		PVRSRV_IOWR(PVRSRV_BRIDGE_SGX_CMD_BASE+29)
 #define PVRSRV_BRIDGE_SGX_READ_HWPERF_CB			PVRSRV_IOWR(PVRSRV_BRIDGE_SGX_CMD_BASE+30)
-#endif
 
 #if defined(PDUMP)
 #define PVRSRV_BRIDGE_SGX_PDUMP_BUFFER_ARRAY		PVRSRV_IOWR(PVRSRV_BRIDGE_SGX_CMD_BASE+31)
@@ -82,11 +83,12 @@ extern "C" {
 #define PVRSRV_BRIDGE_SGX_PDUMP_COUNTER_REGISTERS	PVRSRV_IOWR(PVRSRV_BRIDGE_SGX_CMD_BASE+33)
 #define PVRSRV_BRIDGE_SGX_PDUMP_TA_SIGNATURE_REGISTERS	PVRSRV_IOWR(PVRSRV_BRIDGE_SGX_CMD_BASE+34)
 #define PVRSRV_BRIDGE_SGX_PDUMP_HWPERFCB				PVRSRV_IOWR(PVRSRV_BRIDGE_SGX_CMD_BASE+35)
+#define PVRSRV_BRIDGE_SGX_PDUMP_SAVEMEM					PVRSRV_IOWR(PVRSRV_BRIDGE_SGX_CMD_BASE+36)
 #endif
 
 
 
-#define PVRSRV_BRIDGE_LAST_SGX_CMD (PVRSRV_BRIDGE_SGX_CMD_BASE+35)
+#define PVRSRV_BRIDGE_LAST_SGX_CMD (PVRSRV_BRIDGE_SGX_CMD_BASE+36)
 
  
 typedef struct PVRSRV_BRIDGE_IN_GETPHYSPAGEADDR
@@ -108,8 +110,13 @@ typedef struct PVRSRV_BRIDGE_OUT_GETPHYSPAGEADDR
 typedef struct PVRSRV_BRIDGE_IN_SGX_GETMMU_PDADDR_TAG
 {
 	IMG_UINT32				ui32BridgeFlags; 
+#if defined (SUPPORT_SID_INTERFACE)
+	IMG_SID					hDevCookie;
+	IMG_SID					hDevMemContext;
+#else
 	IMG_HANDLE				hDevCookie;
 	IMG_HANDLE				hDevMemContext;
+#endif
 }PVRSRV_BRIDGE_IN_SGX_GETMMU_PDADDR;
 
  
@@ -123,7 +130,11 @@ typedef struct PVRSRV_BRIDGE_OUT_SGX_GETMMU_PDADDR_TAG
 typedef struct PVRSRV_BRIDGE_IN_GETCLIENTINFO_TAG
 {
 	IMG_UINT32					ui32BridgeFlags; 
+#if defined (SUPPORT_SID_INTERFACE)
+	IMG_SID						hDevCookie;
+#else
 	IMG_HANDLE					hDevCookie;
+#endif
 }PVRSRV_BRIDGE_IN_GETCLIENTINFO;
 
  
@@ -137,7 +148,11 @@ typedef struct PVRSRV_BRIDGE_OUT_GETINTERNALDEVINFO_TAG
 typedef struct PVRSRV_BRIDGE_IN_GETINTERNALDEVINFO_TAG
 {
 	IMG_UINT32				ui32BridgeFlags; 
+#if defined (SUPPORT_SID_INTERFACE)
+	IMG_SID					hDevCookie;
+#else
 	IMG_HANDLE				hDevCookie;
+#endif
 }PVRSRV_BRIDGE_IN_GETINTERNALDEVINFO;
 
  
@@ -150,8 +165,12 @@ typedef struct PVRSRV_BRIDGE_OUT_GETCLIENTINFO_TAG
  
 typedef struct PVRSRV_BRIDGE_IN_RELEASECLIENTINFO_TAG
 {
-	IMG_UINT32				ui32BridgeFlags; 
-	IMG_HANDLE				hDevCookie;
+	IMG_UINT32			ui32BridgeFlags; 
+#if defined (SUPPORT_SID_INTERFACE)
+	IMG_SID				hDevCookie;
+#else
+	IMG_HANDLE			hDevCookie;
+#endif
 	SGX_CLIENT_INFO  	sClientInfo;
 }PVRSRV_BRIDGE_IN_RELEASECLIENTINFO;
 
@@ -159,14 +178,22 @@ typedef struct PVRSRV_BRIDGE_IN_RELEASECLIENTINFO_TAG
 typedef struct PVRSRV_BRIDGE_IN_ISPBREAKPOLL_TAG
 {
 	IMG_UINT32				ui32BridgeFlags; 
+#if defined (SUPPORT_SID_INTERFACE)
+	IMG_SID					hDevCookie;
+#else
 	IMG_HANDLE				hDevCookie;
+#endif
 }PVRSRV_BRIDGE_IN_ISPBREAKPOLL;
 
  
 typedef struct PVRSRV_BRIDGE_IN_DOKICK_TAG
 {
 	IMG_UINT32				ui32BridgeFlags; 
+#if defined (SUPPORT_SID_INTERFACE)
+	IMG_SID					hDevCookie;
+#else
 	IMG_HANDLE				hDevCookie;
+#endif
 	SGX_CCB_KICK			sCCBKick;
 }PVRSRV_BRIDGE_IN_DOKICK;
 
@@ -174,7 +201,11 @@ typedef struct PVRSRV_BRIDGE_IN_DOKICK_TAG
 typedef struct PVRSRV_BRIDGE_IN_SGX_SCHEDULE_PROCESS_QUEUES_TAG
 {
 	IMG_UINT32				ui32BridgeFlags; 
+#if defined (SUPPORT_SID_INTERFACE)
+	IMG_SID					hDevCookie;
+#else
 	IMG_HANDLE				hDevCookie;
+#endif
 }PVRSRV_BRIDGE_IN_SGX_SCHEDULE_PROCESS_QUEUES;
 
 
@@ -183,7 +214,11 @@ typedef struct PVRSRV_BRIDGE_IN_SGX_SCHEDULE_PROCESS_QUEUES_TAG
 typedef struct PVRSRV_BRIDGE_IN_SUBMITTRANSFER_TAG
 {
 	IMG_UINT32				ui32BridgeFlags; 
+#if defined (SUPPORT_SID_INTERFACE)
+	IMG_SID					hDevCookie;
+#else
 	IMG_HANDLE				hDevCookie;
+#endif
 	PVRSRV_TRANSFER_SGX_KICK 			sKick;
 }PVRSRV_BRIDGE_IN_SUBMITTRANSFER;
 
@@ -192,8 +227,12 @@ typedef struct PVRSRV_BRIDGE_IN_SUBMITTRANSFER_TAG
 typedef struct PVRSRV_BRIDGE_IN_SUBMIT2D_TAG
 {
 	IMG_UINT32				ui32BridgeFlags; 
+#if defined (SUPPORT_SID_INTERFACE)
+	IMG_SID					hDevCookie;
+#else
 	IMG_HANDLE				hDevCookie;
-	PVRSRV_2D_SGX_KICK 				sKick;
+#endif
+	PVRSRV_2D_SGX_KICK 		sKick;
 } PVRSRV_BRIDGE_IN_SUBMIT2D;
 #endif
 #endif
@@ -202,7 +241,11 @@ typedef struct PVRSRV_BRIDGE_IN_SUBMIT2D_TAG
 typedef struct PVRSRV_BRIDGE_IN_READREGDWORD_TAG
 {
 	IMG_UINT32				ui32BridgeFlags; 
+#if defined (SUPPORT_SID_INTERFACE)
+	IMG_SID					hDevCookie;
+#else
 	IMG_HANDLE				hDevCookie;
+#endif
     IMG_PCHAR				pszKey;
     IMG_PCHAR				pszValue;
 }PVRSRV_BRIDGE_IN_READREGDWORD;
@@ -218,14 +261,22 @@ typedef struct PVRSRV_BRIDGE_OUT_READREGDWORD_TAG
 typedef struct PVRSRV_BRIDGE_IN_SGXGETMISCINFO_TAG
 {
 	IMG_UINT32		ui32BridgeFlags; 
+#if defined (SUPPORT_SID_INTERFACE)
+	IMG_SID			hDevCookie;
+#else
 	IMG_HANDLE		hDevCookie;
+#endif
 	SGX_MISC_INFO	*psMiscInfo;
 }PVRSRV_BRIDGE_IN_SGXGETMISCINFO;
 
 typedef struct PVRSRV_BRIDGE_IN_SGXINFO_FOR_SRVINIT_TAG
 {
 	IMG_UINT32		ui32BridgeFlags; 
+#if defined (SUPPORT_SID_INTERFACE)
+	IMG_SID			hDevCookie;
+#else
 	IMG_HANDLE		hDevCookie;
+#endif
 }PVRSRV_BRIDGE_IN_SGXINFO_FOR_SRVINIT;
 
 typedef struct PVRSRV_BRIDGE_OUT_SGXINFO_FOR_SRVINIT_TAG
@@ -237,16 +288,32 @@ typedef struct PVRSRV_BRIDGE_OUT_SGXINFO_FOR_SRVINIT_TAG
 typedef struct PVRSRV_BRIDGE_IN_SGXDEVINITPART2_TAG
 {
 	IMG_UINT32		ui32BridgeFlags; 
+#if defined (SUPPORT_SID_INTERFACE)
+	IMG_SID			hDevCookie;
+#else
 	IMG_HANDLE		hDevCookie;
+#endif
 	SGX_BRIDGE_INIT_INFO	sInitInfo;
 }PVRSRV_BRIDGE_IN_SGXDEVINITPART2;
+
+typedef struct PVRSRV_BRIDGE_OUT_SGXDEVINITPART2_TAG
+{
+	PVRSRV_ERROR 	eError;
+	IMG_UINT32 		ui32KMBuildOptions;
+
+}PVRSRV_BRIDGE_OUT_SGXDEVINITPART2;
 
  
 typedef struct PVRSRV_BRIDGE_IN_2DQUERYBLTSCOMPLETE_TAG
 {
 	IMG_UINT32				ui32BridgeFlags; 
+#if defined (SUPPORT_SID_INTERFACE)
+	IMG_SID					hDevCookie;
+	IMG_SID					hKernSyncInfo;
+#else
 	IMG_HANDLE				hDevCookie;
 	IMG_HANDLE				hKernSyncInfo;
+#endif
 	IMG_BOOL				bWaitForComplete;
 }PVRSRV_BRIDGE_IN_2DQUERYBLTSCOMPLETE;
 
@@ -256,13 +323,26 @@ typedef struct PVRSRV_BRIDGE_IN_2DQUERYBLTSCOMPLETE_TAG
 typedef struct PVRSRV_BRIDGE_IN_SGXFINDSHAREDPBDESC_TAG
 {
 	IMG_UINT32 ui32BridgeFlags; 
+#if defined (SUPPORT_SID_INTERFACE)
+	IMG_SID    hDevCookie;
+#else
 	IMG_HANDLE hDevCookie;
-	IMG_BOOL bLockOnFailure;
+#endif
+	IMG_BOOL   bLockOnFailure;
 	IMG_UINT32 ui32TotalPBSize;
 }PVRSRV_BRIDGE_IN_SGXFINDSHAREDPBDESC;
 
 typedef struct PVRSRV_BRIDGE_OUT_SGXFINDSHAREDPBDESC_TAG
 {
+#if defined (SUPPORT_SID_INTERFACE)
+	IMG_SID hKernelMemInfo;
+	IMG_SID hSharedPBDesc;
+	IMG_SID hSharedPBDescKernelMemInfoHandle;
+	IMG_SID hHWPBDescKernelMemInfoHandle;
+	IMG_SID hBlockKernelMemInfoHandle;
+	IMG_SID hHWBlockKernelMemInfoHandle;
+	IMG_SID ahSharedPBDescSubKernelMemInfoHandles[PVRSRV_BRIDGE_SGX_SHAREDPBDESC_MAX_SUBMEMINFOS];
+#else
 	IMG_HANDLE hKernelMemInfo;
 	IMG_HANDLE hSharedPBDesc;
 	IMG_HANDLE hSharedPBDescKernelMemInfoHandle;
@@ -270,6 +350,7 @@ typedef struct PVRSRV_BRIDGE_OUT_SGXFINDSHAREDPBDESC_TAG
 	IMG_HANDLE hBlockKernelMemInfoHandle;
 	IMG_HANDLE hHWBlockKernelMemInfoHandle;
 	IMG_HANDLE ahSharedPBDescSubKernelMemInfoHandles[PVRSRV_BRIDGE_SGX_SHAREDPBDESC_MAX_SUBMEMINFOS];
+#endif
 	IMG_UINT32 ui32SharedPBDescSubKernelMemInfoHandlesCount;
 	PVRSRV_ERROR eError;
 }PVRSRV_BRIDGE_OUT_SGXFINDSHAREDPBDESC;
@@ -277,7 +358,11 @@ typedef struct PVRSRV_BRIDGE_OUT_SGXFINDSHAREDPBDESC_TAG
 typedef struct PVRSRV_BRIDGE_IN_SGXUNREFSHAREDPBDESC_TAG
 {
 	IMG_UINT32 ui32BridgeFlags; 
+#if defined (SUPPORT_SID_INTERFACE)
+	IMG_SID    hSharedPBDesc;
+#else
 	IMG_HANDLE hSharedPBDesc;
+#endif
 }PVRSRV_BRIDGE_IN_SGXUNREFSHAREDPBDESC;
 
 typedef struct PVRSRV_BRIDGE_OUT_SGXUNREFSHAREDPBDESC_TAG
@@ -289,20 +374,34 @@ typedef struct PVRSRV_BRIDGE_OUT_SGXUNREFSHAREDPBDESC_TAG
 typedef struct PVRSRV_BRIDGE_IN_SGXADDSHAREDPBDESC_TAG
 {
 	IMG_UINT32 ui32BridgeFlags; 
+	IMG_UINT32 ui32TotalPBSize;
+#if defined (SUPPORT_SID_INTERFACE)
+	IMG_SID    hDevCookie;
+	IMG_SID    hSharedPBDescKernelMemInfo;
+	IMG_SID    hHWPBDescKernelMemInfo;
+	IMG_SID    hBlockKernelMemInfo;
+	IMG_SID    hHWBlockKernelMemInfo;
+	IMG_SID    *phKernelMemInfoHandles;
+#else
 	IMG_HANDLE hDevCookie;
 	IMG_HANDLE hSharedPBDescKernelMemInfo;
 	IMG_HANDLE hHWPBDescKernelMemInfo;
 	IMG_HANDLE hBlockKernelMemInfo;
 	IMG_HANDLE hHWBlockKernelMemInfo;
-	IMG_UINT32 ui32TotalPBSize;
 	IMG_HANDLE *phKernelMemInfoHandles;
+#endif
 	IMG_UINT32 ui32KernelMemInfoHandlesCount;
+	IMG_DEV_VIRTADDR sHWPBDescDevVAddr;
 }PVRSRV_BRIDGE_IN_SGXADDSHAREDPBDESC;
 
 typedef struct PVRSRV_BRIDGE_OUT_SGXADDSHAREDPBDESC_TAG
 {
 	PVRSRV_ERROR eError;
+#if defined (SUPPORT_SID_INTERFACE)
+	IMG_SID      hSharedPBDesc;
+#else
 	IMG_HANDLE hSharedPBDesc;
+#endif
 }PVRSRV_BRIDGE_OUT_SGXADDSHAREDPBDESC;
 
 
@@ -318,9 +417,15 @@ typedef struct PVRSRV_BRIDGE_IN_PDUMP_BUFFER_ARRAY_TAG
 typedef struct PVRSRV_BRIDGE_IN_PDUMP_3D_SIGNATURE_REGISTERS_TAG
 {
 	IMG_UINT32 ui32BridgeFlags; 
+#if defined (SUPPORT_SID_INTERFACE)
+	IMG_SID    hDevCookie;
+	IMG_SID    hDevMemContext;
+#else
 	IMG_HANDLE hDevCookie;
+	IMG_HANDLE hDevMemContext;
+#endif
 	IMG_UINT32 ui32DumpFrameNum;
-	IMG_BOOL bLastFrame;
+	IMG_BOOL   bLastFrame;
 	IMG_UINT32 *pui32Registers;
 	IMG_UINT32 ui32NumRegisters;
 }PVRSRV_BRIDGE_IN_PDUMP_3D_SIGNATURE_REGISTERS;
@@ -328,6 +433,11 @@ typedef struct PVRSRV_BRIDGE_IN_PDUMP_3D_SIGNATURE_REGISTERS_TAG
 typedef struct PVRSRV_BRIDGE_IN_PDUMPCOUNTER_REGISTERS_TAG
 {
 	IMG_UINT32 ui32BridgeFlags; 
+#if defined (SUPPORT_SID_INTERFACE)
+	IMG_SID    hDevCookie;
+#else
+	IMG_HANDLE hDevCookie;
+#endif
 	IMG_UINT32 ui32DumpFrameNum;
 	IMG_BOOL bLastFrame;
 	IMG_UINT32 *pui32Registers;
@@ -337,7 +447,11 @@ typedef struct PVRSRV_BRIDGE_IN_PDUMPCOUNTER_REGISTERS_TAG
 typedef struct PVRSRV_BRIDGE_IN_PDUMP_TA_SIGNATURE_REGISTERS_TAG
 {
 	IMG_UINT32 ui32BridgeFlags; 
+#if defined (SUPPORT_SID_INTERFACE)
+	IMG_SID    hDevCookie;
+#else
 	IMG_HANDLE hDevCookie;
+#endif
 	IMG_UINT32 ui32DumpFrameNum;
 	IMG_UINT32 ui32TAKickCount;
 	IMG_BOOL bLastFrame;
@@ -348,59 +462,117 @@ typedef struct PVRSRV_BRIDGE_IN_PDUMP_TA_SIGNATURE_REGISTERS_TAG
 typedef struct PVRSRV_BRIDGE_IN_PDUMP_HWPERFCB_TAG
 {
 	IMG_UINT32			ui32BridgeFlags; 
+#if defined (SUPPORT_SID_INTERFACE)
+	IMG_SID				hDevCookie;
+	IMG_SID				hDevMemContext;
+#else
 	IMG_HANDLE			hDevCookie;
+	IMG_HANDLE			hDevMemContext;
+#endif
 	IMG_CHAR			szFileName[PVRSRV_PDUMP_MAX_FILENAME_SIZE];
 	IMG_UINT32			ui32FileOffset;
 	IMG_UINT32			ui32PDumpFlags;
 
 }PVRSRV_BRIDGE_IN_PDUMP_HWPERFCB;
 
+typedef struct PVRSRV_BRIDGE_IN_PDUMP_SAVEMEM
+{
+	IMG_UINT32			ui32BridgeFlags; 
+#if defined (SUPPORT_SID_INTERFACE)
+	IMG_SID				hDevCookie;
+	IMG_SID				hDevMemContext;
+#else
+	IMG_HANDLE			hDevCookie;
+#endif
+	IMG_CHAR			szFileName[PVRSRV_PDUMP_MAX_FILENAME_SIZE];
+	IMG_UINT32			ui32FileOffset;
+	IMG_DEV_VIRTADDR 	sDevVAddr;
+	IMG_UINT32			ui32Size;
+#if !defined (SUPPORT_SID_INTERFACE)
+	IMG_HANDLE			hDevMemContext;
+#endif
+	IMG_UINT32			ui32PDumpFlags;
+
+}PVRSRV_BRIDGE_IN_PDUMP_SAVEMEM;
+
 #endif
 
 typedef struct PVRSRV_BRIDGE_IN_SGX_REGISTER_HW_RENDER_CONTEXT_TAG
 {
 	IMG_UINT32 ui32BridgeFlags; 
+#if defined (SUPPORT_SID_INTERFACE)
+	IMG_SID    hDevCookie;
+#else
 	IMG_HANDLE hDevCookie;
+#endif
 	IMG_DEV_VIRTADDR sHWRenderContextDevVAddr;
 }PVRSRV_BRIDGE_IN_SGX_REGISTER_HW_RENDER_CONTEXT;
 
 typedef struct PVRSRV_BRIDGE_OUT_SGX_REGISTER_HW_RENDER_CONTEXT_TAG
 {
 	PVRSRV_ERROR eError;
+#if defined (SUPPORT_SID_INTERFACE)
+	IMG_SID    hHWRenderContext;
+#else
 	IMG_HANDLE hHWRenderContext;
+#endif
 }PVRSRV_BRIDGE_OUT_SGX_REGISTER_HW_RENDER_CONTEXT;
 
 typedef struct PVRSRV_BRIDGE_IN_SGX_UNREGISTER_HW_RENDER_CONTEXT_TAG
 {
 	IMG_UINT32 ui32BridgeFlags; 
+	IMG_BOOL   bForceCleanup;
+#if defined (SUPPORT_SID_INTERFACE)
+	IMG_SID    hDevCookie;
+	IMG_SID    hHWRenderContext;
+#else
 	IMG_HANDLE hDevCookie;
 	IMG_HANDLE hHWRenderContext;
+#endif
 }PVRSRV_BRIDGE_IN_SGX_UNREGISTER_HW_RENDER_CONTEXT;
 
 typedef struct PVRSRV_BRIDGE_IN_SGX_REGISTER_HW_TRANSFER_CONTEXT_TAG
 {
 	IMG_UINT32 ui32BridgeFlags; 
+#if defined (SUPPORT_SID_INTERFACE)
+	IMG_SID    hDevCookie;
+#else
 	IMG_HANDLE hDevCookie;
+#endif
 	IMG_DEV_VIRTADDR sHWTransferContextDevVAddr;
 }PVRSRV_BRIDGE_IN_SGX_REGISTER_HW_TRANSFER_CONTEXT;
 
 typedef struct PVRSRV_BRIDGE_OUT_SGX_REGISTER_HW_TRANSFER_CONTEXT_TAG
 {
 	PVRSRV_ERROR eError;
+#if defined (SUPPORT_SID_INTERFACE)
+	IMG_SID      hHWTransferContext;
+#else
 	IMG_HANDLE hHWTransferContext;
+#endif
 }PVRSRV_BRIDGE_OUT_SGX_REGISTER_HW_TRANSFER_CONTEXT;
 
 typedef struct PVRSRV_BRIDGE_IN_SGX_UNREGISTER_HW_TRANSFER_CONTEXT_TAG
 {
 	IMG_UINT32 ui32BridgeFlags; 
+	IMG_BOOL   bForceCleanup;
+#if defined (SUPPORT_SID_INTERFACE)
+	IMG_SID    hDevCookie;
+	IMG_SID    hHWTransferContext;
+#else
 	IMG_HANDLE hDevCookie;
 	IMG_HANDLE hHWTransferContext;
+#endif
 }PVRSRV_BRIDGE_IN_SGX_UNREGISTER_HW_TRANSFER_CONTEXT;
 
 typedef struct PVRSRV_BRIDGE_IN_SGX_FLUSH_HW_RENDER_TARGET_TAG
 {
 	IMG_UINT32 ui32BridgeFlags; 
+#if defined (SUPPORT_SID_INTERFACE)
+	IMG_SID    hDevCookie;
+#else
 	IMG_HANDLE hDevCookie;
+#endif
 	IMG_DEV_VIRTADDR sHWRTDataSetDevVAddr;
 }PVRSRV_BRIDGE_IN_SGX_FLUSH_HW_RENDER_TARGET;
 
@@ -409,53 +581,49 @@ typedef struct PVRSRV_BRIDGE_IN_SGX_FLUSH_HW_RENDER_TARGET_TAG
 typedef struct PVRSRV_BRIDGE_IN_SGX_REGISTER_HW_2D_CONTEXT_TAG
 {
 	IMG_UINT32 ui32BridgeFlags; 
+#if defined (SUPPORT_SID_INTERFACE)
+	IMG_SID    hDevCookie;
+#else
 	IMG_HANDLE hDevCookie;
+#endif
 	IMG_DEV_VIRTADDR sHW2DContextDevVAddr;
 }PVRSRV_BRIDGE_IN_SGX_REGISTER_HW_2D_CONTEXT;
 
 typedef struct PVRSRV_BRIDGE_OUT_SGX_REGISTER_HW_2D_CONTEXT_TAG
 {
 	PVRSRV_ERROR eError;
+#if defined (SUPPORT_SID_INTERFACE)
+	IMG_SID    hHW2DContext;
+#else
 	IMG_HANDLE hHW2DContext;
+#endif
 }PVRSRV_BRIDGE_OUT_SGX_REGISTER_HW_2D_CONTEXT;
 
 typedef struct PVRSRV_BRIDGE_IN_SGX_UNREGISTER_HW_2D_CONTEXT_TAG
 {
 	IMG_UINT32 ui32BridgeFlags; 
+	IMG_BOOL   bForceCleanup;
+#if defined (SUPPORT_SID_INTERFACE)
+	IMG_SID    hDevCookie;
+	IMG_SID    hHW2DContext;
+#else
 	IMG_HANDLE hDevCookie;
 	IMG_HANDLE hHW2DContext;
+#endif
 }PVRSRV_BRIDGE_IN_SGX_UNREGISTER_HW_2D_CONTEXT;
 
 #define	SGX2D_MAX_BLT_CMD_SIZ		256	
 #endif 
 
 
-typedef struct PVRSRV_BRIDGE_IN_SGX_READ_DIFF_COUNTERS_TAG
-{
-	IMG_UINT32		ui32BridgeFlags; 
-	IMG_HANDLE		hDevCookie;
-	IMG_UINT32		ui32Reg;
-	IMG_BOOL		bNew;
-	IMG_UINT32		ui32New;
-	IMG_UINT32		ui32NewReset;
-	IMG_UINT32		ui32CountersReg;
-	IMG_UINT32		ui32Reg2;
-} PVRSRV_BRIDGE_IN_SGX_READ_DIFF_COUNTERS;
-
-typedef struct PVRSRV_BRIDGE_OUT_SGX_READ_DIFF_COUNTERS_TAG
-{
-	PVRSRV_ERROR				eError;
-	IMG_UINT32					ui32Old;
-	IMG_BOOL					bActive;
-	PVRSRV_SGXDEV_DIFF_INFO		sDiffs;			
-} PVRSRV_BRIDGE_OUT_SGX_READ_DIFF_COUNTERS;
-
-
-#if defined(SUPPORT_SGX_HWPERF)
 typedef struct PVRSRV_BRIDGE_IN_SGX_READ_HWPERF_CB_TAG
 {
 	IMG_UINT32					ui32BridgeFlags; 
+#if defined (SUPPORT_SID_INTERFACE)
+	IMG_SID						hDevCookie;
+#else
 	IMG_HANDLE					hDevCookie;
+#endif
 	IMG_UINT32					ui32ArraySize;
 	PVRSRV_SGX_HWPERF_CB_ENTRY	*psHWPerfCBData;
 } PVRSRV_BRIDGE_IN_SGX_READ_HWPERF_CB;
@@ -467,7 +635,6 @@ typedef struct PVRSRV_BRIDGE_OUT_SGX_READ_HWPERF_CB_TAG
 	IMG_UINT32			ui32ClockSpeed;
 	IMG_UINT32			ui32HostTimeStamp;
 } PVRSRV_BRIDGE_OUT_SGX_READ_HWPERF_CB;
-#endif 
 
 #if defined (__cplusplus)
 }
