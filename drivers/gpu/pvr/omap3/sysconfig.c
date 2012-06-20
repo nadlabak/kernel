@@ -43,7 +43,7 @@
 
 #if !defined(NO_HARDWARE) && \
      defined(SYS_USING_INTERRUPTS) && \
-     defined(SGX530) && (SGX_CORE_REV == 125)
+     defined(SGX530)
 #define SGX_OCP_REGS_ENABLED
 #endif
 
