@@ -349,7 +349,7 @@ CONFIG_ALIGNMENT_TRAP=y
 #
 CONFIG_ZBOOT_ROM_TEXT=0x0
 CONFIG_ZBOOT_ROM_BSS=0x0
-CONFIG_CMDLINE="/dev/null rw mem=244M@0x80C00000 init=/init ip=off brdrev=P2A androidboot.bootloader=0x0000 mtdparts=omap2-nand.0:1536k@2176k(pds),384k@4480k(cid),384k@7424k(misc),3584k(boot)ro,4608k@15232k(recovery),8960k(cdrom),179840k@29184k(system),106m@209408k(cache),201856k(userdata),1536k(cust),2m@521728k(kpanic)"
+CONFIG_CMDLINE="console=ttyS2,115200n8 console=ttyMTD10 rw mem=244M@0x80C00000 vram=4M omapfb.vram=0:4M init=/init ip=off brdrev=P2A androidboot.bootloader=0x0000 mtdparts=omap2-nand.0:1536k@2176k(pds),384k@4480k(cid),384k@7424k(misc),3584k(boot)ro,4608k@15232k(recovery),8960k(cdrom),179840k@29184k(system),106m@209408k(cache),201856k(userdata),1536k(cust),2m@521728k(kpanic)"
 # CONFIG_XIP_KERNEL is not set
 # CONFIG_KEXEC is not set
 
@@ -1421,16 +1421,14 @@ CONFIG_VIDEO_OMAP3=y
 #
 # Graphics support
 #
-CONFIG_SGX=y
-CONFIG_SGX_BUILD_RELEASE=y
+CONFIG_SGX530=y
+CONFIG_SGX_REV121=y
+CONFIG_SGX_530_BUILD_RELEASE=y
 # CONFIG_SGX_BUILD_DEBUG is not set
-CONFIG_SGX_RELEASE_LOGGING=y
 # CONFIG_SGX_EDM_TRACING is not set
 # CONFIG_SGX_MK_TRACE is not set
-CONFIG_PVR_OMAPLFB=y
 CONFIG_PVR_OMAP_DSS2=y
 # CONFIG_PVR_OMAP_USE_VSYNC is not set
-CONFIG_PVR_APM=y
 # CONFIG_VGASTATE is not set
 CONFIG_VIDEO_OUTPUT_CONTROL=m
 CONFIG_FB=y
