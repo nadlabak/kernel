@@ -1911,7 +1911,11 @@ IMG_VOID SGXPanic(PVRSRV_SGXDEV_INFO	*psDevInfo)
 {
 	PVR_LOG(("SGX panic"));
 	SGXDumpDebugInfo(psDevInfo, IMG_FALSE);
+#if defined(PVRSRV_RESET_ON_HWTIMEOUT)
 	OSPanic();
+#else
+	PVR_LOG(("OSPanic disabled"));
+#endif
 }
 
 
@@ -2733,8 +2737,6 @@ PVRSRV_ERROR SGXGetMiscInfoKM(PVRSRV_SGXDEV_INFO	*psDevInfo,
 			return PVRSRV_OK;
 		}
 
-#if defined(DEBUG)
-		
 		case SGX_MISC_INFO_PANIC:
 		{
 			PVR_LOG(("User requested SGX panic"));
@@ -2743,7 +2745,6 @@ PVRSRV_ERROR SGXGetMiscInfoKM(PVRSRV_SGXDEV_INFO	*psDevInfo,
 
 			return PVRSRV_OK;
 		}
-#endif
 
 		default:
 		{

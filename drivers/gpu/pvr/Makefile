@@ -9,6 +9,8 @@ ccflags-y = -DLINUX -D__linux__ -Idrivers/gpu/pvr \
 	-DSUPPORT_PERCONTEXT_PB \
 	-DTRANSFER_QUEUE \
 	-DSYS_USING_INTERRUPTS \
+	-DSUPPORT_LINUX_X86_WRITECOMBINE \
+	-DSUPPORT_LINUX_X86_PAT \
 	-DPVR_SECURE_HANDLES \
 	-DPVR_SECURE_FD_EXPORT \
 	-DLDM_PLATFORM \
@@ -22,20 +24,16 @@ ccflags-y = -DLINUX -D__linux__ -Idrivers/gpu/pvr \
 	-DPVR_LINUX_TIMERS_USING_WORKQUEUES \
 	-DFLIP_TECHNIQUE_OVERLAY \
 	-DPVR_LINUX_USING_WORKQUEUES \
-	-DSUPPORT_ANDROID_PLATFORM \
 	-DPVR_LINUX_MISR_USING_PRIVATE_WORKQUEUE \
-	-DSYS_CUSTOM_POWERLOCK_WRAP \
 	-DSUPPORT_SGX_NEW_STATUS_VALS \
-        -DSYS_OMAP3430_PIN_MEMORY_BUS_CLOCK \
 	-DSGX_EARLYSUSPEND \
-	-DPVRSRV_MODNAME="\"pvrsrvkm"\" \
+	-DPVR_NO_OMAP_TIMER \
+	-DSUPPORT_SGX_LOW_LATENCY_SCHEDULING \
 	-DPVR_LDM_DRIVER_REGISTRATION_NAME="\"pvrsrvkm\"" \
-	-DSUPPORT_PVRSRV_GET_DC_SYSTEM_BUFFER
-
-ccflags-$(CONFIG_SGX_DEBUG_DISPLAY_DRIVER) += -DDEBUG_DISP_DRV
+	-DSUPPORT_PVRSRV_GET_DC_SYSTEM_BUFFER \
+	-DPVRSRV_MODNAME="\"pvrsrvkm"\"
 
 ccflags-$(CONFIG_SGX540) +=  -Idrivers/gpu/pvr/omap4  -Idrivers/gpu/pvr/sgx \
-	-DNO_OMAP_TIMER \
 	-DSGX_CLK_CORE_DIV5 \
 	-DSGX540 -DSUPPORT_SGX540
 
@@ -46,15 +44,13 @@ ccflags-$(CONFIG_SGX530) +=  -Idrivers/gpu/pvr/omap3  -Idrivers/gpu/pvr/sgx \
 	-DSGX530 -DSUPPORT_SGX530
 
 ccflags-$(CONFIG_SGX_REV125) += -DSGX_CORE_REV=125
-ccflags-$(CONFIG_SGX_REV121) += -DSGX_CORE_REV=121 \
-    -DPLAT_TI35x=1
+ccflags-$(CONFIG_SGX_REV121) += -DSGX_CORE_REV=121
 
 ccflags-$(CONFIG_SGX_530_BUILD_RELEASE) += \
 	-DPVR_BUILD_TYPE="\"release\"" \
 	-DRELEASE \
 	-DSUPPORT_ACTIVE_POWER_MANAGEMENT \
-	-DSUPPORT_HW_RECOVERY \
-	-DSUPPORT_SGX_LOW_LATENCY_SCHEDULING
+	-DSUPPORT_HW_RECOVERY
 
 ccflags-$(CONFIG_SGX_530_BUILD_DEBUG) += \
 	-DPVR_BUILD_TYPE="\"debug\""  -DDEBUG \
@@ -69,7 +65,8 @@ ccflags-$(CONFIG_SGX_530_BUILD_DEBUG) += \
 ccflags-$(CONFIG_SGX_540_BUILD_RELEASE) += \
 	-DPVR_BUILD_TYPE="\"release\"" \
 	-DRELEASE \
-	-DSUPPORT_SGX_LOW_LATENCY_SCHEDULING
+	-DSUPPORT_ACTIVE_POWER_MANAGEMENT \
+	-DSUPPORT_HW_RECOVERY
 
 ccflags-$(CONFIG_SGX_540_BUILD_DEBUG) += \
 	-DPVR_BUILD_TYPE="\"debug\""  -DDEBUG \
@@ -79,10 +76,13 @@ ccflags-$(CONFIG_SGX_540_BUILD_DEBUG) += \
 	-DDEBUG_BRIDGE_KM \
 	-DPVRSRV_USSE_EDM_STATUS_DEBUG \
 	-DPVRSRV_DUMP_MK_TRACE \
+	-DSUPPORT_ACTIVE_POWER_MANAGEMENT \
+	-DSUPPORT_HW_RECOVERY \
 	-DDEBUG_LOG_PATH_TRUNCATE="\"eurasia_km\""
 
-ccflags-$(CONFIG_SGX_PDUMP) += -Idrivers/gpu/pvr/pdump \
-	-DPDUMP
+ccflags-$(CONFIG_SGX_PDUMP) += -Idrivers/gpu/pvr/dbgdrv \
+	-DPDUMP \
+	-DSUPPORT_DBGDRV_EVENT_OBJECTS
 
 pvr_common-y := \
 	osfunc.o \
@@ -136,6 +136,8 @@ sgx-y :=  \
 	sgx/mmu.o \
 	sgx/pb.o
 
+pvr530-$(CONFIG_ION_OMAP) += ion.o
+
 sgx_displayclass-y := \
 	display/omap_sgx_displayclass.o \
 	display/omap_display.o
@@ -145,12 +147,12 @@ omaplfb-y := \
 	omaplfb/omaplfb_linux.o
 
 dbgdrv-$(CONFIG_SGX_PDUMP) := \
-	pdump/main.o \
-	pdump/dbgdriv.o \
-	pdump/ioctl.o \
-	pdump/handle.o \
-	pdump/hostfunc.o \
-	pdump/hotkey.o
+	dbgdrv/main.o \
+	dbgdrv/dbgdriv.o \
+	dbgdrv/ioctl.o \
+	dbgdrv/handle.o \
+	dbgdrv/hostfunc.o \
+	dbgdrv/hotkey.o
 
 obj-$(CONFIG_SGX540) := pvr_common.o sgx.o omaplfb.o pvr540.o
 obj-$(CONFIG_SGX530) := pvr_common.o sgx.o omaplfb.o pvr530.o

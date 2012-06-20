@@ -80,11 +80,9 @@
 #define ON_EACH_CPU(func, info, wait) on_each_cpu(func, info, 0, wait)
 #endif
 
-#if 0
 #if defined(PVR_LINUX_USING_WORKQUEUES) && !defined(CONFIG_PREEMPT)
 #error "A preemptible Linux kernel is required when using workqueues"
 #endif
-#endif 
 
 #if defined(EMULATOR)
 #define EVENT_OBJECT_TIMEOUT_MS		(2000)

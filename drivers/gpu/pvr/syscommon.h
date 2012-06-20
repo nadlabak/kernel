@@ -171,6 +171,10 @@ static INLINE IMG_VOID SysAcquireData(SYS_DATA **ppsSysData)
 	
 	*ppsSysData = gpsSysData;
 
+	
+
+
+
 	PVR_ASSERT (gpsSysData != IMG_NULL);
 }
 

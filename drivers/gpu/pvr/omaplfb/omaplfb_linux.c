@@ -47,7 +47,6 @@
 #include <linux/workqueue.h>
 #include <linux/fb.h>
 #include <linux/console.h>
-#include <plat/vrfb.h>
 #include <../drivers/video/omap2/omapfb/omapfb.h>
 #include <linux/mutex.h>
 
