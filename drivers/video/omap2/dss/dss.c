@@ -562,6 +562,8 @@ int dss_init(bool skip_init)
 	omap_writel(0, 0x4805041C);
 #endif
 
+    omap_writel(0x1FFFF, 0x48050418);
+
 	r = request_irq(INT_24XX_DSS_IRQ,
 			cpu_is_omap24xx()
 			? dss_irq_handler_omap2
