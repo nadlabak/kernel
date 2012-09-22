@@ -1,7 +1,7 @@
 #
 # Automatically generated make config: don't edit
 # Linux kernel version: 2.6.32.59
-# Mon Apr  2 12:52:47 2012
+# Sat Sep 22 16:02:16 2012
 #
 CONFIG_ARM=y
 CONFIG_SYS_SUPPORTS_APM_EMULATION=y
@@ -1964,10 +1964,10 @@ CONFIG_BRIDGE_RECOVERY=y
 #
 # CONFIG_EXT2_FS is not set
 # CONFIG_EXT3_FS is not set
-CONFIG_EXT4_FS=m
+CONFIG_EXT4_FS=y
 # CONFIG_EXT4_FS_XATTR is not set
 # CONFIG_EXT4_DEBUG is not set
-CONFIG_JBD2=m
+CONFIG_JBD2=y
 # CONFIG_REISERFS_FS is not set
 # CONFIG_JFS_FS is not set
 # CONFIG_FS_POSIX_ACL is not set
