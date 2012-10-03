@@ -1,6 +1,6 @@
 /**********************************************************************
  *
- * Copyright (C) Imagination Technologies Ltd. All rights reserved.
+ * Copyright(c) 2008 Imagination Technologies Ltd. All rights reserved.
  * 
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -80,8 +80,8 @@ typedef char				TCHAR, *PTCHAR, *PTSTR;
 			#if defined(__linux__) || defined(__METAG)
 
 				#define IMG_CALLCONV
-				#define IMG_INTERNAL	__attribute__((visibility("hidden")))
-				#define IMG_EXPORT		__attribute__((visibility("default")))
+				#define IMG_INTERNAL	__attribute__ ((visibility ("hidden")))
+				#define IMG_EXPORT
 				#define IMG_IMPORT
 				#define IMG_RESTRICT	__restrict__
 
@@ -102,20 +102,5 @@ typedef char				TCHAR, *PTCHAR, *PTSTR;
 #endif
 
 #define IMG_CONST const
-
-#if defined(__GNUC__)
-#define IMG_FORMAT_PRINTF(x,y)		__attribute__((format(printf,x,y)))
-#else
-#define IMG_FORMAT_PRINTF(x,y)
-#endif
-
-#define  CLEANUP_WITH_POLL		IMG_FALSE
-#define  FORCE_CLEANUP			IMG_TRUE
-
-#if defined (_WIN64)
-#define IMG_UNDEF	(~0ULL)
-#else
-#define IMG_UNDEF	(~0UL)
-#endif
 
 #endif 

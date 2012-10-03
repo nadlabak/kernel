@@ -1,6 +1,6 @@
 /**********************************************************************
  *
- * Copyright (C) Imagination Technologies Ltd. All rights reserved.
+ * Copyright(c) 2008 Imagination Technologies Ltd. All rights reserved.
  * 
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -28,20 +28,7 @@
 #define _DBGDRVIF_
 
 
-#if defined(__linux__)
-
-#define FILE_DEVICE_UNKNOWN             0
-#define METHOD_BUFFERED                 0
-#define FILE_ANY_ACCESS                 0
-
-#define CTL_CODE( DeviceType, Function, Method, Access ) (Function) 
-#define MAKEIOCTLINDEX(i)	((i) & 0xFFF)
-
-#else
-
 #include "ioctldef.h"
-
-#endif
 
 #define DEBUG_CAPMODE_FRAMED			0x00000001UL
 #define DEBUG_CAPMODE_CONTINUOUS		0x00000002UL
@@ -56,8 +43,6 @@
 #define DEBUG_FLAGS_USE_NONPAGED_MEM	0x00000001UL
 #define DEBUG_FLAGS_NO_BUF_EXPANDSION	0x00000002UL
 #define DEBUG_FLAGS_ENABLESAMPLE		0x00000004UL
-#define DEBUG_FLAGS_READONLY			0x00000008UL
-#define DEBUG_FLAGS_WRITEONLY			0x00000010UL
 
 #define DEBUG_FLAGS_TEXTSTREAM			0x80000000UL
 
@@ -112,7 +97,6 @@
 #define DEBUG_SERVICE_WRITELF			CTL_CODE(FILE_DEVICE_UNKNOWN, DEBUG_SERVICE_IOCTL_BASE + 0x16, METHOD_BUFFERED, FILE_ANY_ACCESS)
 #define DEBUG_SERVICE_READLF			CTL_CODE(FILE_DEVICE_UNKNOWN, DEBUG_SERVICE_IOCTL_BASE + 0x17, METHOD_BUFFERED, FILE_ANY_ACCESS)
 #define DEBUG_SERVICE_WAITFOREVENT		CTL_CODE(FILE_DEVICE_UNKNOWN, DEBUG_SERVICE_IOCTL_BASE + 0x18, METHOD_BUFFERED, FILE_ANY_ACCESS)
-#define DEBUG_SERVICE_SETCONNNOTIFY		CTL_CODE(FILE_DEVICE_UNKNOWN, DEBUG_SERVICE_IOCTL_BASE + 0x19, METHOD_BUFFERED, FILE_ANY_ACCESS)
 
 
 typedef enum _DBG_EVENT_
@@ -120,54 +104,37 @@ typedef enum _DBG_EVENT_
 	DBG_EVENT_STREAM_DATA = 1
 } DBG_EVENT;
 
-
 typedef struct _DBG_IN_CREATESTREAM_
 {
-	union
-	{
-		IMG_CHAR *pszName;
-		IMG_UINT64 ui64Name;
-	} u;
 	IMG_UINT32 ui32Pages;
 	IMG_UINT32 ui32CapMode;
 	IMG_UINT32 ui32OutMode;
+	IMG_CHAR *pszName;
 }DBG_IN_CREATESTREAM, *PDBG_IN_CREATESTREAM;
 
 typedef struct _DBG_IN_FINDSTREAM_
 {
-	union
-	{
-		IMG_CHAR *pszName;
-		IMG_UINT64 ui64Name;
-	}u;
 	IMG_BOOL bResetStream;
+	IMG_CHAR *pszName;
 }DBG_IN_FINDSTREAM, *PDBG_IN_FINDSTREAM;
 
 typedef struct _DBG_IN_WRITESTRING_
 {
-	union
-	{
-		IMG_CHAR *pszString;
-		IMG_UINT64 ui64String;
-	} u;
-	IMG_SID hStream;
+	IMG_VOID *pvStream;
 	IMG_UINT32 ui32Level;
+	IMG_CHAR *pszString;
 }DBG_IN_WRITESTRING, *PDBG_IN_WRITESTRING;
 
 typedef struct _DBG_IN_READSTRING_
 {
-	union
-	{
-		IMG_CHAR *pszString;
-		IMG_UINT64 ui64String;
-	} u;
-	IMG_SID hStream;
+	IMG_VOID *pvStream;
 	IMG_UINT32 ui32StringLen;
+	IMG_CHAR *pszString;
 } DBG_IN_READSTRING, *PDBG_IN_READSTRING;
 
 typedef struct _DBG_IN_SETDEBUGMODE_
 {
-	IMG_SID hStream;
+	IMG_VOID *pvStream;
 	IMG_UINT32 ui32Mode;
 	IMG_UINT32 ui32Start;
 	IMG_UINT32 ui32End;
@@ -176,118 +143,92 @@ typedef struct _DBG_IN_SETDEBUGMODE_
 
 typedef struct _DBG_IN_SETDEBUGOUTMODE_
 {
-	IMG_SID hStream;
+	IMG_VOID *pvStream;
 	IMG_UINT32 ui32Mode;
 } DBG_IN_SETDEBUGOUTMODE, *PDBG_IN_SETDEBUGOUTMODE;
 
 typedef struct _DBG_IN_SETDEBUGLEVEL_
 {
-	IMG_SID hStream;
+	IMG_VOID *pvStream;
 	IMG_UINT32 ui32Level;
 } DBG_IN_SETDEBUGLEVEL, *PDBG_IN_SETDEBUGLEVEL;
 
 typedef struct _DBG_IN_SETFRAME_
 {
-	IMG_SID hStream;
+	IMG_VOID *pvStream;
 	IMG_UINT32 ui32Frame;
 } DBG_IN_SETFRAME, *PDBG_IN_SETFRAME;
 
 typedef struct _DBG_IN_WRITE_
 {
-	union
-	{
-		IMG_UINT8 *pui8InBuffer;
-		IMG_UINT64 ui64InBuffer;
-	} u;
-	IMG_SID hStream;
+	IMG_VOID *pvStream;
 	IMG_UINT32 ui32Level;
 	IMG_UINT32 ui32TransferSize;
+	IMG_UINT8 *pui8InBuffer;
 } DBG_IN_WRITE, *PDBG_IN_WRITE;
 
 typedef struct _DBG_IN_READ_
 {
-	union
-	{
-		IMG_UINT8 *pui8OutBuffer;
-		IMG_UINT64 ui64OutBuffer;
-	} u;
-	IMG_SID hStream;
+	IMG_VOID *pvStream;
 	IMG_BOOL bReadInitBuffer;
 	IMG_UINT32 ui32OutBufferSize;
+	IMG_UINT8 *pui8OutBuffer;
 } DBG_IN_READ, *PDBG_IN_READ;
 
 typedef struct _DBG_IN_OVERRIDEMODE_
 {
-	IMG_SID hStream;
+	IMG_VOID *pvStream;
 	IMG_UINT32 ui32Mode;
 } DBG_IN_OVERRIDEMODE, *PDBG_IN_OVERRIDEMODE;
 
 typedef struct _DBG_IN_ISCAPTUREFRAME_
 {
-	IMG_SID hStream;
+	IMG_VOID *pvStream;
 	IMG_BOOL bCheckPreviousFrame;
 } DBG_IN_ISCAPTUREFRAME, *PDBG_IN_ISCAPTUREFRAME;
 
 typedef struct _DBG_IN_SETMARKER_
 {
-	IMG_SID hStream;
+	IMG_VOID *pvStream;
 	IMG_UINT32 ui32Marker;
 } DBG_IN_SETMARKER, *PDBG_IN_SETMARKER;
 
 typedef struct _DBG_IN_WRITE_LF_
 {
-	union
-	{
-		IMG_UINT8 *pui8InBuffer;
-		IMG_UINT64 ui64InBuffer;
-	} u;
 	IMG_UINT32 ui32Flags;
-	IMG_SID    hStream;
+	IMG_VOID *pvStream;
 	IMG_UINT32 ui32Level;
 	IMG_UINT32 ui32BufferSize;
+	IMG_UINT8 *pui8InBuffer;
 } DBG_IN_WRITE_LF, *PDBG_IN_WRITE_LF;
 
 #define WRITELF_FLAGS_RESETBUF		0x00000001UL
 
-typedef struct _DBG_STREAM_CONTROL_
-{
-	IMG_BOOL   bInitPhaseComplete;	
-	IMG_UINT32 ui32Flags;			
-
-	IMG_UINT32 ui32CapMode;			
-	IMG_UINT32 ui32OutMode;			
-	IMG_UINT32 ui32DebugLevel;
-	IMG_UINT32 ui32DefaultMode;
-	IMG_UINT32 ui32Start;			
-	IMG_UINT32 ui32End;				
-	IMG_UINT32 ui32Current;			
-	IMG_UINT32 ui32SampleRate;		
-	IMG_UINT32 ui32Reserved;
-} DBG_STREAM_CONTROL, *PDBG_STREAM_CONTROL;
 typedef struct _DBG_STREAM_
 {
 	struct _DBG_STREAM_ *psNext;
 	struct _DBG_STREAM_ *psInitStream;
-	DBG_STREAM_CONTROL *psCtrl;
-	IMG_BOOL   bCircularAllowed;
-	IMG_PVOID  pvBase;
+	IMG_BOOL   bInitPhaseComplete;
+	IMG_UINT32 ui32Flags;
+	IMG_UINT32 ui32Base;
 	IMG_UINT32 ui32Size;
 	IMG_UINT32 ui32RPtr;
 	IMG_UINT32 ui32WPtr;
 	IMG_UINT32 ui32DataWritten;
-	IMG_UINT32 ui32Marker;			
-	IMG_UINT32 ui32InitPhaseWOff;	
-	
-	
-	
-	
+	IMG_UINT32 ui32CapMode;
+	IMG_UINT32 ui32OutMode;
+	IMG_UINT32 ui32DebugLevel;
+	IMG_UINT32 ui32DefaultMode;
+	IMG_UINT32 ui32Start;
+	IMG_UINT32 ui32End;
+	IMG_UINT32 ui32Current;
+	IMG_UINT32 ui32Access;
+	IMG_UINT32 ui32SampleRate;
+	IMG_UINT32 ui32Reserved;
+	IMG_UINT32 ui32Timeout;
+	IMG_UINT32 ui32Marker;
 	IMG_CHAR szName[30];		
 } DBG_STREAM,*PDBG_STREAM;
-
-typedef struct _DBGKM_CONNECT_NOTIFIER_
-{
-	IMG_VOID (IMG_CALLCONV *pfnConnectNotifier)		(IMG_VOID);
-} DBGKM_CONNECT_NOTIFIER, *PDBGKM_CONNECT_NOTIFIER;
 
 typedef struct _DBGKM_SERVICE_TABLE_
 {
@@ -319,9 +260,7 @@ typedef struct _DBGKM_SERVICE_TABLE_
 	IMG_UINT32 	(IMG_CALLCONV *pfnGetStreamOffset)		(PDBG_STREAM psStream);
 	IMG_VOID	(IMG_CALLCONV *pfnSetStreamOffset)		(PDBG_STREAM psStream, IMG_UINT32 ui32StreamOffset);
 	IMG_BOOL 	(IMG_CALLCONV *pfnIsLastCaptureFrame)	(PDBG_STREAM psStream);
-	IMG_VOID 	(IMG_CALLCONV *pfnWaitForEvent)			(DBG_EVENT eEvent);
-	IMG_VOID 	(IMG_CALLCONV *pfnSetConnectNotifier)	(DBGKM_CONNECT_NOTIFIER fn_notifier);
-	IMG_UINT32 	(IMG_CALLCONV *pfnWritePersist)			(PDBG_STREAM psStream,IMG_UINT8 *pui8InBuf,IMG_UINT32 ui32InBuffSize,IMG_UINT32 ui32Level);
+	IMG_VOID 	(IMG_CALLCONV *pfnWaitForEvent)	(DBG_EVENT eEvent);
 } DBGKM_SERVICE_TABLE, *PDBGKM_SERVICE_TABLE;
 
 

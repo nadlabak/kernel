@@ -411,7 +411,6 @@ struct omap_overlay_manager {
 
 	int (*apply)(struct omap_overlay_manager *mgr);
 	int (*wait_for_go)(struct omap_overlay_manager *mgr);
-	
 };
 
 struct omap_dss_device {

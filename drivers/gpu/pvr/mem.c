@@ -1,6 +1,6 @@
 /**********************************************************************
  *
- * Copyright (C) Imagination Technologies Ltd. All rights reserved.
+ * Copyright(c) 2008 Imagination Technologies Ltd. All rights reserved.
  * 
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -29,17 +29,15 @@
 
 
 static PVRSRV_ERROR
-FreeSharedSysMemCallBack(IMG_PVOID  pvParam,
-						 IMG_UINT32 ui32Param,
-						 IMG_BOOL   bDummy)
+FreeSharedSysMemCallBack(IMG_PVOID	pvParam,
+						 IMG_UINT32	ui32Param)
 {
 	PVRSRV_KERNEL_MEM_INFO *psKernelMemInfo = pvParam;
 
 	PVR_UNREFERENCED_PARAMETER(ui32Param);
-	PVR_UNREFERENCED_PARAMETER(bDummy);
 
 	OSFreePages(psKernelMemInfo->ui32Flags,
-				psKernelMemInfo->uAllocSize,
+				psKernelMemInfo->ui32AllocSize,
 				psKernelMemInfo->pvLinAddrKM,
 				psKernelMemInfo->sMemBlk.hOSMemHandle);
 
@@ -56,7 +54,7 @@ FreeSharedSysMemCallBack(IMG_PVOID  pvParam,
 IMG_EXPORT PVRSRV_ERROR
 PVRSRVAllocSharedSysMemoryKM(PVRSRV_PER_PROCESS_DATA	*psPerProc,
 							 IMG_UINT32					ui32Flags,
-							 IMG_SIZE_T 				uSize,
+							 IMG_SIZE_T 				ui32Size,
 							 PVRSRV_KERNEL_MEM_INFO 	**ppsKernelMemInfo)
 {
 	PVRSRV_KERNEL_MEM_INFO *psKernelMemInfo;
@@ -75,11 +73,11 @@ PVRSRVAllocSharedSysMemoryKM(PVRSRV_PER_PROCESS_DATA	*psPerProc,
 	ui32Flags &= ~PVRSRV_HAP_MAPTYPE_MASK;
 	ui32Flags |= PVRSRV_HAP_MULTI_PROCESS;
 	psKernelMemInfo->ui32Flags = ui32Flags;
-	psKernelMemInfo->uAllocSize = uSize;
+	psKernelMemInfo->ui32AllocSize = ui32Size;
 
 	if(OSAllocPages(psKernelMemInfo->ui32Flags,
-					psKernelMemInfo->uAllocSize,
-					(IMG_UINT32)HOST_PAGESIZE(),
+					psKernelMemInfo->ui32AllocSize,
+					HOST_PAGESIZE(),
 					&psKernelMemInfo->pvLinAddrKM,
 					&psKernelMemInfo->sMemBlk.hOSMemHandle)
 		!= PVRSRV_OK)
@@ -98,7 +96,7 @@ PVRSRVAllocSharedSysMemoryKM(PVRSRV_PER_PROCESS_DATA	*psPerProc,
 								  RESMAN_TYPE_SHARED_MEM_INFO,
 								  psKernelMemInfo,
 								  0,
-								  &FreeSharedSysMemCallBack);
+								  FreeSharedSysMemCallBack);
 
 	*ppsKernelMemInfo = psKernelMemInfo;
 
@@ -113,11 +111,11 @@ PVRSRVFreeSharedSysMemoryKM(PVRSRV_KERNEL_MEM_INFO *psKernelMemInfo)
 
 	if(psKernelMemInfo->sMemBlk.hResItem)
 	{
-		eError = ResManFreeResByPtr(psKernelMemInfo->sMemBlk.hResItem, CLEANUP_WITH_POLL);
+		eError = ResManFreeResByPtr(psKernelMemInfo->sMemBlk.hResItem);
 	}
 	else
 	{
-		eError = FreeSharedSysMemCallBack(psKernelMemInfo, 0, CLEANUP_WITH_POLL);
+		eError = FreeSharedSysMemCallBack(psKernelMemInfo, 0);
 	}
 
 	return eError;

@@ -1,6 +1,6 @@
 /**********************************************************************
  *
- * Copyright (C) Imagination Technologies Ltd. All rights reserved.
+ * Copyright(c) 2008 Imagination Technologies Ltd. All rights reserved.
  * 
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -45,30 +45,23 @@ typedef char			IMG_CHAR,	*IMG_PCHAR;
 
 typedef unsigned short	IMG_UINT16,	*IMG_PUINT16;
 typedef signed short	IMG_INT16,	*IMG_PINT16;
-#if !defined(IMG_UINT32_IS_ULONG)
-typedef unsigned int	IMG_UINT32,	*IMG_PUINT32;
-typedef signed int		IMG_INT32,	*IMG_PINT32;
-#else
 typedef unsigned long	IMG_UINT32,	*IMG_PUINT32;
 typedef signed long		IMG_INT32,	*IMG_PINT32;
-#endif
+
 #if !defined(IMG_UINT32_MAX)
 	#define IMG_UINT32_MAX 0xFFFFFFFFUL
 #endif
 
-#if defined(USE_CODE)
-
-typedef unsigned __int64	IMG_UINT64, *IMG_PUINT64;
-typedef __int64				IMG_INT64,  *IMG_PINT64;
-
-#else
 	#if (defined(LINUX) || defined(__METAG))
+#if !defined(USE_CODE)
 		typedef unsigned long long		IMG_UINT64,	*IMG_PUINT64;
 		typedef long long 				IMG_INT64,	*IMG_PINT64;
-	#else
-		#error("define an OS")
-	#endif
 #endif
+	#else
+
+		#error("define an OS")
+
+	#endif
 
 #if !(defined(LINUX) && defined (__KERNEL__))
 typedef float			IMG_FLOAT,	*IMG_PFLOAT;
@@ -82,46 +75,30 @@ typedef	enum tag_img_bool
 	IMG_FORCE_ALIGN = 0x7FFFFFFF
 } IMG_BOOL, *IMG_PBOOL;
 
-typedef void            IMG_VOID, *IMG_PVOID;
+typedef void            IMG_VOID,	*IMG_PVOID;
 
 typedef IMG_INT32       IMG_RESULT;
 
-#if defined(_WIN64)
-	typedef unsigned __int64	IMG_UINTPTR_T;
-	typedef signed __int64		IMG_PTRDIFF_T;
-	typedef IMG_UINT64			IMG_SIZE_T;
-#else
-	typedef unsigned int	IMG_UINTPTR_T;
-	typedef IMG_UINT32		IMG_SIZE_T;
-#endif
+typedef IMG_UINT32      IMG_UINTPTR_T;
 
 typedef IMG_PVOID       IMG_HANDLE;
 
 typedef void**          IMG_HVOID,	* IMG_PHVOID;
 
-#define IMG_NULL        0 
+typedef IMG_UINT32		IMG_SIZE_T;
 
-typedef IMG_UINT32      IMG_SID;
+#define IMG_NULL        0
 
-typedef IMG_UINT32      IMG_EVENTSID;
-
-#if defined(SUPPORT_SID_INTERFACE)
-	typedef IMG_SID IMG_S_HANDLE;
-#else
-	typedef IMG_HANDLE IMG_S_HANDLE;
-#endif
 
 typedef IMG_PVOID IMG_CPU_VIRTADDR;
 
-typedef struct _IMG_DEV_VIRTADDR
+typedef struct 
 {
 	
-	IMG_UINT32  uiAddr;
+	IMG_UINT32 uiAddr;
 #define IMG_CAST_TO_DEVVADDR_UINT(var)		(IMG_UINT32)(var)
 	
 } IMG_DEV_VIRTADDR;
-
-typedef IMG_UINT32 IMG_DEVMEM_SIZE_T;
 
 typedef struct _IMG_CPU_PHYADDR
 {

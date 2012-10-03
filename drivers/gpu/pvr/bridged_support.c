@@ -1,6 +1,6 @@
 /**********************************************************************
  *
- * Copyright (C) Imagination Technologies Ltd. All rights reserved.
+ * Copyright(c) 2008 Imagination Technologies Ltd. All rights reserved.
  * 
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -30,11 +30,7 @@
 
 
 PVRSRV_ERROR
-#if defined (SUPPORT_SID_INTERFACE)
-PVRSRVLookupOSMemHandle(PVRSRV_HANDLE_BASE *psHandleBase, IMG_HANDLE *phOSMemHandle, IMG_SID hMHandle)
-#else
 PVRSRVLookupOSMemHandle(PVRSRV_HANDLE_BASE *psHandleBase, IMG_HANDLE *phOSMemHandle, IMG_HANDLE hMHandle)
-#endif
 {
 	IMG_HANDLE hMHandleInt;
 	PVRSRV_HANDLE_TYPE eHandleType;
@@ -51,7 +47,7 @@ PVRSRVLookupOSMemHandle(PVRSRV_HANDLE_BASE *psHandleBase, IMG_HANDLE *phOSMemHan
 
 	switch(eHandleType)
 	{
-#if defined(PVR_SECURE_HANDLES) || defined (SUPPORT_SID_INTERFACE)
+#if defined(PVR_SECURE_HANDLES)
 		case PVRSRV_HANDLE_TYPE_MEM_INFO:
 		case PVRSRV_HANDLE_TYPE_MEM_INFO_REF:
 		case PVRSRV_HANDLE_TYPE_SHARED_SYS_MEM_INFO:

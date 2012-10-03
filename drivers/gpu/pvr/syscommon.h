@@ -1,6 +1,6 @@
 /**********************************************************************
  *
- * Copyright (C) Imagination Technologies Ltd. All rights reserved.
+ * Copyright(c) 2008 Imagination Technologies Ltd. All rights reserved.
  * 
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -36,9 +36,7 @@
 #include "ra.h"
 #include "device.h"
 #include "buffer_manager.h"
-#include "pvr_debug.h"
-#include "services.h"
-
+ 
 #if defined(NO_HARDWARE) && defined(__linux__) && defined(__KERNEL__)
 #include <asm/io.h>
 #endif
@@ -57,9 +55,6 @@ typedef struct _SYS_DEVICE_ID_TAG
 
 #define SYS_MAX_LOCAL_DEVMEM_ARENAS	4
 
-typedef IMG_HANDLE (*PFN_HTIMER_CREATE) (IMG_VOID);
-typedef IMG_UINT32 (*PFN_HTIMER_GETUS) (IMG_HANDLE);
-typedef IMG_VOID (*PFN_HTIMER_DESTROY) (IMG_HANDLE);
 typedef struct _SYS_DATA_TAG_
 {
     IMG_UINT32                  ui32NumDevices;      	   	
@@ -80,24 +75,29 @@ typedef struct _SYS_DATA_TAG_
 	IMG_UINT32					*pvSOCTimerRegisterKM;		
 	IMG_VOID					*pvSOCClockGateRegsBase;	
 	IMG_UINT32					ui32SOCClockGateRegsSize;
+	PFN_CMD_PROC				*ppfnCmdProcList[SYS_DEVICE_COUNT];
 															
-	struct _DEVICE_COMMAND_DATA_ *apsDeviceCommandData[SYS_DEVICE_COUNT];
+
+
+	PCOMMAND_COMPLETE_DATA		*ppsCmdCompleteData[SYS_DEVICE_COUNT];
 															
+
+	IMG_BOOL                    bReProcessQueues;    		
 
 	RA_ARENA					*apsLocalDevMemArena[SYS_MAX_LOCAL_DEVMEM_ARENAS]; 
 
     IMG_CHAR                    *pszVersionString;          
-#if defined (SUPPORT_SID_INTERFACE)
-	PVRSRV_EVENTOBJECT_KM		*psGlobalEventObject;		
-#else
-	PVRSRV_EVENTOBJECT			*psGlobalEventObject;		
+	PVRSRV_EVENTOBJECT			*psGlobalEventObject;			
+
+#if defined(SGX_OCP_REGS_ENABLED) && defined(SGX530) && (SGX_CORE_REV == 125)
+	IMG_SYS_PHYADDR				sOCPRegsSysPBase;
+	IMG_CPU_PHYADDR				sOCPRegsCpuPBase;
+	IMG_CPU_VIRTADDR			pvOCPRegsLinAddr;
 #endif
 
-	PVRSRV_MISC_INFO_CPUCACHEOP_TYPE ePendingCacheOpType;	
-
-	PFN_HTIMER_CREATE	pfnHighResTimerCreate;
-	PFN_HTIMER_GETUS	pfnHighResTimerGetus;
-	PFN_HTIMER_DESTROY	pfnHighResTimerDestroy;
+#if defined(SUPPORT_CPU_CACHED_BUFFERS)
+	IMG_BOOL					bFlushCPUCache;				
+#endif
 } SYS_DATA;
 
 
@@ -129,11 +129,11 @@ PVRSRV_ERROR SysDevicePostPowerState(IMG_UINT32 ui32DeviceIndex,
 									 PVRSRV_DEV_POWER_STATE eCurrentPowerState);
 
 #if defined(SYS_CUSTOM_POWERLOCK_WRAP)
-PVRSRV_ERROR SysPowerLockWrap(IMG_VOID);
-IMG_VOID SysPowerLockUnwrap(IMG_VOID);
+PVRSRV_ERROR SysPowerLockWrap(SYS_DATA *psSysData);
+IMG_VOID SysPowerLockUnwrap(SYS_DATA *psSysData);
 #endif
 
-PVRSRV_ERROR SysOEMFunction (	IMG_UINT32	ui32ID,
+PVRSRV_ERROR SysOEMFunction (	IMG_UINT32	ui32ID, 
 								IMG_VOID	*pvIn,
 								IMG_UINT32  ulInSize,
 								IMG_VOID	*pvOut,
@@ -152,13 +152,12 @@ IMG_BOOL SysVerifySysPAddrToDevPAddr (PVRSRV_DEVICE_TYPE eDeviceType, IMG_SYS_PH
 
 extern SYS_DATA* gpsSysData;
 
-
 #if !defined(USE_CODE)
 
 #ifdef INLINE_IS_PRAGMA
 #pragma inline(SysAcquireData)
 #endif
-static INLINE IMG_VOID SysAcquireData(SYS_DATA **ppsSysData)
+static INLINE PVRSRV_ERROR SysAcquireData(SYS_DATA **ppsSysData)
 {
 	
 	*ppsSysData = gpsSysData;
@@ -167,17 +166,12 @@ static INLINE IMG_VOID SysAcquireData(SYS_DATA **ppsSysData)
 
 
 
-	PVR_ASSERT (gpsSysData != IMG_NULL);
-}
-
-
-#ifdef INLINE_IS_PRAGMA
-#pragma inline(SysAcquireDataNoCheck)
-#endif
-static INLINE SYS_DATA * SysAcquireDataNoCheck(IMG_VOID)
-{
-	
-	return gpsSysData;
+	if (!gpsSysData)
+	{
+		return PVRSRV_ERROR_GENERIC;	
+   	}
+   		
+	return PVRSRV_OK;
 }
 
 
@@ -226,37 +220,5 @@ static inline IMG_VOID SysWriteHWReg(IMG_PVOID pvLinRegBaseAddr, IMG_UINT32 ui32
 }
 #endif
 
-#ifdef INLINE_IS_PRAGMA
-#pragma inline(SysHighResTimerCreate)
-#endif
-static INLINE IMG_HANDLE SysHighResTimerCreate(IMG_VOID)
-{
-	SYS_DATA *psSysData;
-
-	SysAcquireData(&psSysData);
-	return psSysData->pfnHighResTimerCreate();
-}
-
-#ifdef INLINE_IS_PRAGMA
-#pragma inline(SysHighResTimerGetus)
-#endif
-static INLINE IMG_UINT32 SysHighResTimerGetus(IMG_HANDLE hTimer)
-{
-	SYS_DATA *psSysData;
-
-	SysAcquireData(&psSysData);
-	return psSysData->pfnHighResTimerGetus(hTimer);
-}
-
-#ifdef INLINE_IS_PRAGMA
-#pragma inline(SysHighResTimerDestroy)
-#endif
-static INLINE IMG_VOID SysHighResTimerDestroy(IMG_HANDLE hTimer)
-{
-	SYS_DATA *psSysData;
-
-	SysAcquireData(&psSysData);
-	psSysData->pfnHighResTimerDestroy(hTimer);
-}
 #endif
 
