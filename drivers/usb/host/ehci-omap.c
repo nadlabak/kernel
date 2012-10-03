@@ -392,10 +392,11 @@ static int omap_start_ehc(struct ehci_hcd_omap *omap, struct usb_hcd *hcd)
 	set_bit(HCD_FLAG_HW_ACCESSIBLE, &hcd->flags);
 
 	/* perform TLL soft reset, and wait until reset is complete */
-	ehci_omap_writel(omap->tll_base, OMAP_USBTLL_SYSCONFIG,
-			OMAP_USBTLL_SYSCONFIG_SOFTRESET);
+//	ehci_omap_writel(omap->tll_base, OMAP_USBTLL_SYSCONFIG,
+//			OMAP_USBTLL_SYSCONFIG_SOFTRESET);
 
 	/* Wait for TLL reset to complete */
+/*
 	while (!(ehci_omap_readl(omap->tll_base, OMAP_USBTLL_SYSSTATUS)
 			& OMAP_USBTLL_SYSSTATUS_RESETDONE)) {
 		cpu_relax();
@@ -406,7 +407,7 @@ static int omap_start_ehc(struct ehci_hcd_omap *omap, struct usb_hcd *hcd)
 			goto err_sys_status;
 		}
 	}
-
+*/
 	dev_dbg(&omap->dev->dev, "TLL RESET DONE\n");
 
 	/* SmartIdle mode */

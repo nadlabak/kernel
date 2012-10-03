@@ -246,7 +246,7 @@ static void tdi_reset (struct ehci_hcd *ehci)
 /* reset a non-running (STS_HALT == 1) controller */
 static int ehci_reset (struct ehci_hcd *ehci)
 {
-	int	retval;
+	int	retval=0;
 	u32	command = ehci_readl(ehci, &ehci->regs->command);
 
 	/* If the EHCI debug controller is active, special care must be
@@ -254,13 +254,13 @@ static int ehci_reset (struct ehci_hcd *ehci)
 	if (ehci->debug && !dbgp_reset_prep())
 		ehci->debug = NULL;
 
-	command |= CMD_RESET;
+	command |= CMD_LRESET;
 	dbg_cmd (ehci, "reset", command);
-	ehci_writel(ehci, command, &ehci->regs->command);
+//	ehci_writel(ehci, command, &ehci->regs->command);
 	ehci_to_hcd(ehci)->state = HC_STATE_HALT;
 	ehci->next_statechange = jiffies;
-	retval = handshake (ehci, &ehci->regs->command,
-			    CMD_RESET, 0, 250 * 1000);
+//	retval = handshake (ehci, &ehci->regs->command,
+//			    CMD_RESET, 0, 250 * 1000);
 
 	if (ehci->has_hostpc) {
 		ehci_writel(ehci, USBMODE_EX_HC | USBMODE_EX_VBPS,

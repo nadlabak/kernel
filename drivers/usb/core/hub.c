@@ -753,7 +753,7 @@ static void hub_activate(struct usb_hub *hub, enum hub_activation_type type)
 				!(portstatus & USB_PORT_STAT_CONNECTION) ||
 				!udev ||
 				udev->state == USB_STATE_NOTATTACHED)) {
-			clear_port_feature(hdev, port1, USB_PORT_FEAT_ENABLE);
+//			clear_port_feature(hdev, port1, USB_PORT_FEAT_ENABLE);
 			portstatus &= ~USB_PORT_STAT_ENABLE;
 			LOG_USBHOST_ACTIVITY(aUsbHostDbg, iUsbHostDbg, 0x26);
 		}
@@ -761,14 +761,14 @@ static void hub_activate(struct usb_hub *hub, enum hub_activation_type type)
 		/* Clear status-change flags; we'll debounce later */
 		if (portchange & USB_PORT_STAT_C_CONNECTION) {
 			need_debounce_delay = true;
-			clear_port_feature(hub->hdev, port1,
-					USB_PORT_FEAT_C_CONNECTION);
+//			clear_port_feature(hub->hdev, port1,
+//					USB_PORT_FEAT_C_CONNECTION);
 			LOG_USBHOST_ACTIVITY(aUsbHostDbg, iUsbHostDbg, 0x27);
 		}
 		if (portchange & USB_PORT_STAT_C_ENABLE) {
 			need_debounce_delay = true;
-			clear_port_feature(hub->hdev, port1,
-					USB_PORT_FEAT_C_ENABLE);
+//			clear_port_feature(hub->hdev, port1,
+//					USB_PORT_FEAT_C_ENABLE);
 			LOG_USBHOST_ACTIVITY(aUsbHostDbg, iUsbHostDbg, 0x28);
 		}
 
@@ -2704,7 +2704,8 @@ hub_port_init (struct usb_hub *hub, struct usb_device *udev, int port1,
 	} else {
 		/* Reset the device; full speed may morph to high speed */
 		/* FIXME a USB 2.0 device may morph into SuperSpeed on reset. */
-		retval = hub_port_reset(hub, port1, udev, delay);
+//		retval = hub_port_reset(hub, port1, udev, delay);
+        retval = 0;
 		if (retval < 0)		/* error or disconnect */
 			goto fail;
 		/* success, speed is known */
@@ -2716,7 +2717,9 @@ hub_port_init (struct usb_hub *hub, struct usb_device *udev, int port1,
 		LOG_USBHOST_ACTIVITY(aUsbHostDbg, iUsbHostDbg, 0xE);
 		goto fail;
 	}
+	udev->speed = USB_SPEED_HIGH;
 	oldspeed = udev->speed;
+	udev->state = USB_STATE_UNAUTHENTICATED;
 
 	/* USB 2.0 section 5.5.3 talks about ep0 maxpacket ...
 	 * it's fixed size except for full speed devices.
@@ -2814,7 +2817,7 @@ hub_port_init (struct usb_hub *hub, struct usb_device *udev, int port1,
 			 */
 			for (j = 0; j < 3; ++j) {
 				buf->bMaxPacketSize0 = 0;
-				r = usb_control_msg(udev, usb_rcvaddr0pipe(),
+				r = usb_control_msg(udev, (PIPE_CONTROL << 30) | (0x02 << 8) | USB_DIR_IN,
 					USB_REQ_GET_DESCRIPTOR, USB_DIR_IN,
 					USB_DT_DEVICE << 8, 0,
 					buf, GET_DESCRIPTOR_BUFSIZE,
@@ -2840,7 +2843,8 @@ hub_port_init (struct usb_hub *hub, struct usb_device *udev, int port1,
 			kfree(buf);
 
 			LOG_USBHOST_ACTIVITY(aUsbHostDbg, iUsbHostDbg, 0xD);
-			retval = hub_port_reset(hub, port1, udev, delay);
+//			retval = hub_port_reset(hub, port1, udev, delay);
+            retval = 0;
 			if (retval < 0)		/* error or disconnect */
 				goto fail;
 			if (oldspeed != udev->speed) {
@@ -2865,12 +2869,20 @@ hub_port_init (struct usb_hub *hub, struct usb_device *udev, int port1,
  		 * authorization will assign the final address.
  		 */
 		if (udev->wusb == 0) {
+
+			update_address(udev, devnum);
+		    /* Device now using proper address. */
+		    usb_set_device_state(udev, USB_STATE_ADDRESS);
+		    usb_ep0_reinit(udev);
+            retval = 0;
+            /*
 			for (j = 0; j < SET_ADDRESS_TRIES; ++j) {
 				retval = hub_set_address(udev, devnum);
 				if (retval >= 0)
 					break;
 				msleep(200);
 			}
+			*/
 			if (retval < 0) {
 				dev_err(&udev->dev,
 					"device not accepting address %d, error %d\n",
