@@ -2727,7 +2727,7 @@ hub_port_init (struct usb_hub *hub, struct usb_device *udev, int port1,
 		goto fail;
 	}
 
-#ifndef CONFIG_MAPPHONE_2NDBOOT
+#ifdef CONFIG_MAPPHONE_2NDBOOT
 	udev->speed = USB_SPEED_HIGH;
 	udev->state = USB_STATE_UNAUTHENTICATED;
 #endif

@@ -257,11 +257,11 @@ static int ehci_reset (struct ehci_hcd *ehci)
 #ifndef CONFIG_MAPPHONE_2NDBOOT
 	command |= CMD_RESET;
 	dbg_cmd (ehci, "reset", command);
+	ehci_writel(ehci, command, &ehci->regs->command);
 #else
 	command |= CMD_LRESET;
 	dbg_cmd (ehci, "reset", command);
 #endif
-	ehci_writel(ehci, command, &ehci->regs->command);
 	ehci_to_hcd(ehci)->state = HC_STATE_HALT;
 	ehci->next_statechange = jiffies;
 #ifndef CONFIG_MAPPHONE_2NDBOOT
