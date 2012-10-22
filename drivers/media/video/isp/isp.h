@@ -51,7 +51,7 @@
 #define ALIGN_TO(x, b)		(((unsigned long)x + (b - 1)) & ~(b - 1))
 #define ALIGN_NEAR(x, b)	((unsigned long)x & ~(b-1))
 
-#define ISP_LSC_MEMORY	(16*1024*1024)	/* 16MB LSC workaround memory */
+#define ISP_LSC_MEMORY	(10*1024*1024)	/* 10MB LSC workaround memory */
 
 typedef int (*isp_vbq_callback_ptr) (struct videobuf_buffer *vb);
 typedef void (*isp_callback_t) (unsigned long status,
