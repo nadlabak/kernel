@@ -2789,7 +2789,7 @@ static struct platform_device mapphone_omaplfb_device = {
 
 static void __init mapphone_sgx_init(void)
 {
-	platform_device_register(&mapphone_sgx_device);
+//	platform_device_register(&mapphone_sgx_device);
 	platform_device_register(&mapphone_omaplfb_device);
 }
 
