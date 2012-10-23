@@ -2776,23 +2776,6 @@ static inline void mapphone_ramconsole_init(void) {}
 static inline void omap2_ramconsole_reserve_sdram(void) {}
 #endif
 
-
-static struct platform_device mapphone_sgx_device = {
-       .name                   = "pvrsrvkm",
-       .id             = -1,
-};
-static struct platform_device mapphone_omaplfb_device = {
-	.name			= "omaplfb",
-	.id			= -1,
-};
-
-
-static void __init mapphone_sgx_init(void)
-{
-	platform_device_register(&mapphone_sgx_device);
-	platform_device_register(&mapphone_omaplfb_device);
-}
-
 static void __init mapphone_bp_model_init(void)
 {
 #ifdef CONFIG_OMAP_RESET_CLOCKS
@@ -2933,7 +2916,6 @@ static void __init mapphone_init(void)
 	mapphone_hsmmc_init();
 #endif
 	mapphone_vout_init();
-	mapphone_sgx_init();
 	mapphone_power_off_init();
 	mapphone_gadget_init();
 	mapphone_andusb_init();
