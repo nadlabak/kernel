@@ -498,7 +498,6 @@ static int sim_ioctl(struct inode *inode, struct file *file,
 				   CMD_PARAMETER_SIZE_3);
 
 		if ((UINT8) args_kernel[0] == SIM_MODULE_1) {
-			free_irq(INT_SIM_GENERAL, NULL);
 			status =
 			    request_irq(INT_SIM_GENERAL,
 					sim_module_int_irq_1,
