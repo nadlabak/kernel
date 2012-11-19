@@ -585,6 +585,7 @@ static struct platform_device omap3430_hall_effect_dock = {
 
 static void mapphone_vibrator_init(void)
 {
+	gpio_request(MAPPHONE_VIBRATOR_GPIO, "vibrator");
 	gpio_direction_output(MAPPHONE_VIBRATOR_GPIO, 0);
 	omap_cfg_reg(Y4_34XX_GPIO181);
 }
