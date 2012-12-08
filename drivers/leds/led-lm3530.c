@@ -237,6 +237,13 @@ static ssize_t ld_lm3530_als_show(struct device *dev,
 						 dev);
 	struct lm3530_data *als_data = i2c_get_clientdata(client);
 
+	/* hack: if we're in automatic mode, don't wait for an interrupt
+	   and schedule the processing of the current sensor data now */
+	if (als_data->mode == AUTOMATIC) {
+		disable_irq(als_data->client->irq);
+		queue_work(als_data->working_queue, &als_data->wq);
+	}
+
 	return sprintf(buf, "%u\n", als_data->mode);
 }
 
