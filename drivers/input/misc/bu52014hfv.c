@@ -64,8 +64,20 @@ static ssize_t print_name(struct switch_dev *sdev, char *buf)
 
 	return -EINVAL;
 }
+
+
+static uint32_t bu52014hfv_disable;
+module_param_named(disable, bu52014hfv_disable, uint, 0664);
+
 static int bu52014hfv_update(struct bu52014hfv_info *info, int gpio, int dock)
 {
+	if (bu52014hfv_disable) {
+		if (switch_get_state(&info->sdev) != NO_DOCK) {
+			switch_set_state(&info->sdev, NO_DOCK);
+		}
+		return 0;
+	}
+
 	int state = !gpio_get_value(gpio);
 
 	if (state)
