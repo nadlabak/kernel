@@ -1168,7 +1168,7 @@ static int proc_mpu_opps_write(struct file *filp, const char __user *buffer,
 		//update mpu_opps
 		mpu_opps[index].rate = rate;
 		mpu_opps[index].vsel = vsel;
-		mpu_opps[index].sr_adjust_vsel = vsel;
+		mpu_opps[index].sr_adjust_vsel = 0;
 		
 		//update frequency table (MAX_VDD1_OPP - index)
 		freq_table[MAX_VDD1_OPP - index].frequency = rate / 1000;
