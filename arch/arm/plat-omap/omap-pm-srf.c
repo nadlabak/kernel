@@ -370,7 +370,7 @@ u8 omap_pm_get_max_vdd1_opp()
 			case OMAP_3440:
 				return VDD1_OPP6;
 			default:
-				return VDD1_OPP5;
+				return VDD1_OPP6;
 			}
 		}
 	}

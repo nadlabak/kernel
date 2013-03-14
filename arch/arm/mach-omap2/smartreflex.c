@@ -42,8 +42,9 @@
 #include "smartreflex.h"
 #include "prm-regbits-34xx.h"
 
-/*OMAP3430 Turbo mode: ARM run at 800Mhz*/
-/*#define SR_TURBO*/
+/*OMAP3430 Turbo mode: ARM run at 1000Mhz*/
+#define SR_TURBO
+
 /*OMAP3430 Highspeed mode: ARM run at 720Mhz*/
 /*#define SR_HIGHSPEED*/
 
@@ -1875,7 +1876,7 @@ static void sr1_init(struct omap_sr *sr)
 					sizeof(sr1_34xx_test_nvalues));
 		}
 	if (sr->num_opp == 6)
-		pr_info("VDD1 - OPP6 - 800 Nvalue = 0x%X\n",
+		pr_info("VDD1 - OPP6 - 1000 Nvalue = 0x%X\n",
 					sr->opp_nvalue[5]);
 
 #if defined(SR_HIGHSPEED) || defined(SR_TURBO)
