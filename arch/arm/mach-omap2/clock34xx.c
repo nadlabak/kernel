@@ -1145,6 +1145,10 @@ static int proc_mpu_opps_read(char *buffer, char **buffer_location,
 		return ret;
 }
 
+#ifdef CONFIG_CPU_FREQ_STAT
+extern void cpufreq_stats_freqtable_update(unsigned int cpu, unsigned int index, unsigned int freq);
+#endif
+
 static int proc_mpu_opps_write(struct file *filp, const char __user *buffer,
 															 unsigned long len, void *data)
 {
@@ -1172,6 +1176,9 @@ static int proc_mpu_opps_write(struct file *filp, const char __user *buffer,
 		
 		//update frequency table (MAX_VDD1_OPP - index)
 		freq_table[MAX_VDD1_OPP - index].frequency = rate / 1000;
+#ifdef CONFIG_CPU_FREQ_STAT
+		cpufreq_stats_freqtable_update(0, MAX_VDD1_OPP - index, rate / 1000);
+#endif
 		
 		//in case of MAX_VDD1_OPP update max policy
 		//and in case of one update min policy
