@@ -459,7 +459,7 @@ static int __rpc_create_common(struct inode *dir, struct dentry *dentry,
 {
 	struct inode *inode;
 
-	d_drop(dentry);
+	BUG_ON(!d_unhashed(dentry));
 	inode = rpc_get_inode(dir->i_sb, mode);
 	if (!inode)
 		goto out_err;

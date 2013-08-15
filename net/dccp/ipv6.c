@@ -600,7 +600,7 @@ static struct sock *dccp_v6_request_recv_sock(struct sock *sk,
 
 	   First: no IPv4 options.
 	 */
-	newinet->inet_opt = NULL;
+	newinet->opt = NULL;
 
 	/* Clone RX bits */
 	newnp->rxopt.all = np->rxopt.all;

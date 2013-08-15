@@ -1759,7 +1759,7 @@ int __mpol_equal(struct mempolicy *a, struct mempolicy *b)
  */
 
 /* lookup first element intersecting start-end */
-/* Caller holds sp->mutex */
+/* Caller holds sp->lock */
 static struct sp_node *
 sp_lookup(struct shared_policy *sp, unsigned long start, unsigned long end)
 {
@@ -1823,13 +1823,13 @@ mpol_shared_policy_lookup(struct shared_policy *sp, unsigned long idx)
 
 	if (!sp->root.rb_node)
 		return NULL;
-	mutex_lock(&sp->mutex);
+	spin_lock(&sp->lock);
 	sn = sp_lookup(sp, idx, idx+1);
 	if (sn) {
 		mpol_get(sn->policy);
 		pol = sn->policy;
 	}
-	mutex_unlock(&sp->mutex);
+	spin_unlock(&sp->lock);
 	return pol;
 }
 
@@ -1860,10 +1860,10 @@ static struct sp_node *sp_alloc(unsigned long start, unsigned long end,
 static int shared_policy_replace(struct shared_policy *sp, unsigned long start,
 				 unsigned long end, struct sp_node *new)
 {
-	struct sp_node *n;
-	int ret = 0;
+	struct sp_node *n, *new2 = NULL;
 
-	mutex_lock(&sp->mutex);
+restart:
+	spin_lock(&sp->lock);
 	n = sp_lookup(sp, start, end);
 	/* Take care of old policies in the same range. */
 	while (n && n->start < end) {
@@ -1876,14 +1876,16 @@ static int shared_policy_replace(struct shared_policy *sp, unsigned long start,
 		} else {
 			/* Old policy spanning whole new range. */
 			if (n->end > end) {
-				struct sp_node *new2;
-				new2 = sp_alloc(end, n->end, n->policy);
 				if (!new2) {
-					ret = -ENOMEM;
-					goto out;
+					spin_unlock(&sp->lock);
+					new2 = sp_alloc(end, n->end, n->policy);
+					if (!new2)
+						return -ENOMEM;
+					goto restart;
 				}
 				n->end = start;
 				sp_insert(sp, new2);
+				new2 = NULL;
 				break;
 			} else
 				n->end = start;
@@ -1894,9 +1896,12 @@ static int shared_policy_replace(struct shared_policy *sp, unsigned long start,
 	}
 	if (new)
 		sp_insert(sp, new);
-out:
-	mutex_unlock(&sp->mutex);
-	return ret;
+	spin_unlock(&sp->lock);
+	if (new2) {
+		mpol_put(new2->policy);
+		kmem_cache_free(sn_cache, new2);
+	}
+	return 0;
 }
 
 /**
@@ -1914,7 +1919,7 @@ void mpol_shared_policy_init(struct shared_policy *sp, struct mempolicy *mpol)
 	int ret;
 
 	sp->root = RB_ROOT;		/* empty tree == default mempolicy */
-	mutex_init(&sp->mutex);
+	spin_lock_init(&sp->lock);
 
 	if (mpol) {
 		struct vm_area_struct pvma;
@@ -1982,7 +1987,7 @@ void mpol_free_shared_policy(struct shared_policy *p)
 
 	if (!p->root.rb_node)
 		return;
-	mutex_lock(&p->mutex);
+	spin_lock(&p->lock);
 	next = rb_first(&p->root);
 	while (next) {
 		n = rb_entry(next, struct sp_node, nd);
@@ -1991,7 +1996,7 @@ void mpol_free_shared_policy(struct shared_policy *p)
 		mpol_put(n->policy);
 		kmem_cache_free(sn_cache, n);
 	}
-	mutex_unlock(&p->mutex);
+	spin_unlock(&p->lock);
 }
 
 /* assumes fs == KERNEL_DS */
